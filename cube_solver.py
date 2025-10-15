@@ -12,3 +12,13 @@ def solve_cube(cube: Cube) -> str:
     solution += solve_1lll(cube)
 
     return solution
+
+
+scramble = "F2 U R2 D' L2 U' B2 L2 U' R2 B' R' B L' D F2 U' R B2 F"
+cube = Cube()
+cube.perform_sequence(scramble)
+print(cube)
+print("----------------\n")
+
+solve_cube(cube)
+print(cube)

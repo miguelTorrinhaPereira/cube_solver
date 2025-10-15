@@ -1,4 +1,3 @@
-default_cube_colors = [[i] * 9 for i in range(6)]
 letter_to_face_num = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
 #   U
 # L F R B
@@ -34,9 +33,20 @@ section_step = [1, 3, -1, -3]
 # listed counter clockwise
 middle_cells = [1, 3, 7, 5]
 corner_cells = [0, 6, 8, 2]
+color_to_text_color = [
+    (255, 89, 0),
+    (0, 69, 173),
+    (185, 0, 0),
+    (0, 155, 72),
+    (255, 213, 0),
+    (255, 255, 255),
+]
 
 
 class Cube:
+    default_cube_colors = [[i] * 9 for i in range(6)]
+
+
     def __init__(self, cube_colors: list[list[int]] = default_cube_colors) -> None:
         self.cube_colors = [face.copy() for face in cube_colors]
 
@@ -111,7 +121,7 @@ class Cube:
 
     def perform_sequence(self, moves: str) -> None:
         for i in range(len(moves)):
-            if moves[i] in "2\'":
+            if moves[i] in " 2\'":
                 continue
 
             if i == len(moves) - 1 or moves[i+1] not in "2\'":
@@ -135,4 +145,22 @@ class Cube:
 
 
     def __str__(self) -> str:
-        return self.cube_colors.__str__()
+        def cell_str(color: int):
+            text_color = color_to_text_color[color]
+            return f"[48:2:{text_color[0]};{text_color[1]};{text_color[2]}m [m"
+
+        res = ""
+        for i in range(3):
+            res += " " * 4 + "".join([cell_str(self.cube_colors[4][3 * i + j]) for j in range(3)]) + '\n'
+        res += '\n'
+
+        for i in range(3):
+            for j in range(4):
+                res += "".join([cell_str(self.cube_colors[j][3*i + k]) for k in range(3)]) + " "
+            res += '\n'
+        res += '\n'
+
+        for i in range(3):
+            res += " " * 4 + "".join([cell_str(self.cube_colors[5][3 * i + j]) for j in range(3)]) + '\n'
+
+        return res
