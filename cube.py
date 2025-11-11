@@ -147,7 +147,7 @@ class Cube:
     def __str__(self) -> str:
         def cell_str(color: int):
             text_color = color_to_text_color[color]
-            return f"[48:2:{text_color[0]};{text_color[1]};{text_color[2]}m [m"
+            return f"[48;2;{text_color[0]};{text_color[1]};{text_color[2]}m [m"
 
         res = ""
         for i in range(3):
