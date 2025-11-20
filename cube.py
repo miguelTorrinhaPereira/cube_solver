@@ -1,3 +1,5 @@
+rotations = ("L", "L2", "L'", "F", "F2", "F'", "R", "R2", "R'", "B", "B2", "B'", "U", "U2", "U'", "D", "D2", "D'")
+
 letter_to_face_num = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
 #   U
 # L F R B
@@ -45,15 +47,19 @@ color_to_text_color = [
 
 class Cube:
     default_colors = [[i] * 9 for i in range(6)]
+    ORANGE, BLUE, RED, GREEN, YELLOW, WHITE = list(range(6))
 
 
-    def __init__(self, colors: list[list[int]] = default_colors, rotations: list[str] = []) -> None:
+    def __init__(self, colors: list[list[int]] = default_colors) -> None:
         self.colors = [face.copy() for face in colors]
-        self.rotations = rotations.copy()
 
 
     def get_face(self, face_num: int) -> list[int]:
         return self.colors[face_num]
+
+
+    def get_cell_color(self, face_num: int, cell: int) -> int:
+        return self.colors[face_num][cell]
 
 
     def rotate(self, rotation: str) -> None:
@@ -69,8 +75,6 @@ class Cube:
             self.rotate_face(face_num, True)
             self.rotate_adj_faces(face_num, True)
             self.rotate_face(face_num, True)
-
-        self.rotations.append(rotation)
 
 
     def rotate_face_cells(self, face_num: int, cells: list[int]) -> None:
@@ -148,7 +152,7 @@ class Cube:
 
 
     def copy(self) -> 'Cube':
-        return Cube(self.colors, self.rotations)
+        return Cube(self.colors)
 
 
     def __str__(self) -> str:
