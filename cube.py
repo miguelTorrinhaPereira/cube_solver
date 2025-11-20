@@ -44,11 +44,16 @@ color_to_text_color = [
 
 
 class Cube:
-    default_cube_colors = [[i] * 9 for i in range(6)]
+    default_colors = [[i] * 9 for i in range(6)]
 
 
-    def __init__(self, cube_colors: list[list[int]] = default_cube_colors) -> None:
-        self.cube_colors = [face.copy() for face in cube_colors]
+    def __init__(self, colors: list[list[int]] = default_colors, rotations: list[str] = []) -> None:
+        self.colors = [face.copy() for face in colors]
+        self.rotations = rotations.copy()
+
+
+    def get_face(self, face_num: int) -> list[int]:
+        return self.colors[face_num]
 
 
     def rotate(self, rotation: str) -> None:
@@ -65,9 +70,11 @@ class Cube:
             self.rotate_adj_faces(face_num, True)
             self.rotate_face(face_num, True)
 
+        self.rotations.append(rotation)
+
 
     def rotate_face_cells(self, face_num: int, cells: list[int]) -> None:
-        face = self.cube_colors[face_num]
+        face = self.colors[face_num]
 
         first_cell_color = face[cells[0]]
 
@@ -99,7 +106,7 @@ class Cube:
 
 
     def get_face_section(self, face_num: int, section_num: int) -> list[int]:
-        face = self.cube_colors[face_num]
+        face = self.colors[face_num]
         section = []
         cell = section_beginning[section_num]
         step = section_step[section_num]
@@ -111,7 +118,7 @@ class Cube:
 
 
     def set_face_section(self, face_num: int, section_num: int, new_values: list[int]) -> None:
-        face = self.cube_colors[face_num]
+        face = self.colors[face_num]
         cell = section_beginning[section_num]
         step = section_step[section_num]
         for i in range(3):
@@ -119,19 +126,19 @@ class Cube:
             cell += step
 
 
-    def perform_sequence(self, moves: str) -> None:
-        for i in range(len(moves)):
-            if moves[i] in " 2\'":
+    def perform_sequence(self, rotations: str) -> None:
+        for i in range(len(rotations)):
+            if rotations[i] in " 2\'":
                 continue
 
-            if i == len(moves) - 1 or moves[i+1] not in "2\'":
-                self.rotate(moves[i])
+            if i == len(rotations) - 1 or rotations[i+1] not in "2\'":
+                self.rotate(rotations[i])
             else:
-                self.rotate(moves[i:i+2])
+                self.rotate(rotations[i:i+2])
 
 
     def is_solved(self) -> bool:
-        for face in self.cube_colors:
+        for face in self.colors:
             base_color = face[4]
             for i in range(9):
                 if face[i] != base_color:
@@ -141,7 +148,7 @@ class Cube:
 
 
     def copy(self) -> 'Cube':
-        return Cube(self.cube_colors)
+        return Cube(self.colors, self.rotations)
 
 
     def __str__(self) -> str:
@@ -151,16 +158,16 @@ class Cube:
 
         res = ""
         for i in range(3):
-            res += " " * 4 + "".join([cell_str(self.cube_colors[4][3 * i + j]) for j in range(3)]) + '\n'
+            res += " " * 4 + "".join([cell_str(self.colors[4][3 * i + j]) for j in range(3)]) + '\n'
         res += '\n'
 
         for i in range(3):
             for j in range(4):
-                res += "".join([cell_str(self.cube_colors[j][3*i + k]) for k in range(3)]) + " "
+                res += "".join([cell_str(self.colors[j][3*i + k]) for k in range(3)]) + " "
             res += '\n'
         res += '\n'
 
         for i in range(3):
-            res += " " * 4 + "".join([cell_str(self.cube_colors[5][3 * i + j]) for j in range(3)]) + '\n'
+            res += " " * 4 + "".join([cell_str(self.colors[5][3 * i + j]) for j in range(3)]) + '\n'
 
         return res
