@@ -27,7 +27,6 @@ def get_initial_state(cube: Cube) -> list[int]:
             if cube.get_cell_color(face_num, cell) == Cube.WHITE:
                 middle_pos = 4 * face_num + cell_to_middle_id[cell]
                 adj_face_num, adj_cell = pos_adj[middle_pos]
-                # print(face_num, cell, middle_pos, adj_face_num, adj_cell, cube.get_cell_color(adj_face_num, adj_cell))
                 initial_state[cube.get_cell_color(adj_face_num, adj_cell)] = middle_pos
 
     return initial_state
@@ -39,7 +38,7 @@ def explorer_buff(buff: list[list[int]]) -> None:
             continue
 
         if i != 0:
-            last_rotated_face = (i % ROTATIONS_NUM) // ROTATIONS_PER_FACE
+            last_rotated_face = ((i - 1) % ROTATIONS_NUM) // ROTATIONS_PER_FACE
         else:
             last_rotated_face = -1
 
@@ -93,21 +92,21 @@ def solve_cross(cube: Cube) -> str:
     initial_buff_idx = -1
     for solution_size in range(2 * DEPTH + 1):
         solution_found = False
-        for initial_depth in range(solution_size + 1):
-            solved_depth = solution_size - initial_depth
-            if initial_depth > DEPTH or solved_depth > DEPTH:
-                continue
 
-            begining = get_section_start(initial_depth)
-            end = begining + get_section_size(initial_depth)
-            for i in range(begining, end):
-                if contains_state(sorted_buffers[solved_depth], from_initial_buff[i]):
-                    initial_buff_idx = i
-                    solution_found = True
-                    break
+        solved_depth = min(solution_size, DEPTH)
+        initial_depth = max(solution_size - solved_depth, 0)
 
-            if solution_found:
+        if initial_depth > DEPTH or solved_depth > DEPTH:
+            continue
+
+        begining = get_section_start(initial_depth)
+        end = begining + get_section_size(initial_depth)
+        for i in range(begining, end):
+            if contains_state(sorted_buffers[solved_depth], from_initial_buff[i]):
+                initial_buff_idx = i
+                solution_found = True
                 break
+
         if solution_found:
             break
 
