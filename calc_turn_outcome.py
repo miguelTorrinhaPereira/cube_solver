@@ -1,31 +1,30 @@
-from cube import Cube
-from cross_turn_data import rotations, cell_to_middle_id
+from cube import Cube, rotations
 
+BRACKETS = '{}'
+IDENT = '   '
+POSITION_NUM = 54
+initial_colors = [[face_num * 9 + cell for cell in range(9)] for face_num in range(6)]
 
-blanck_colors = [[0] * 9 for i in range(6)]
-middle_id_to_cell = (1, 5, 7, 3)
+print(BRACKETS[0])
+for rotation in rotations:
+    colors = [initial_colors[i].copy() for i in range(6)]
+    cube = Cube(colors)
+    cube.rotate(rotation)
 
-for middle_pos in range(24):
-    orig_face_num, orig_cell = middle_pos // 4, middle_id_to_cell[middle_pos % 4]
-    print("(", end="")
-    for rotation in rotations:
-        colors = [blanck_colors[i].copy() for i in range(6)]
-
-        colors[orig_face_num][orig_cell] = 1
-        cube = Cube(colors)
-        cube.rotate(rotation)
-
+    print(IDENT + BRACKETS[0], end="")
+    for pos in range(POSITION_NUM):
+        found = False
         for face_num in range(6):
-            found = False
             for cell in range(9):
-                if cube.get_cell_color(face_num, cell) == 1:
-                    new_middle_pos = 4 * face_num + cell_to_middle_id[cell]
-                    print(new_middle_pos, end="")
-                    if rotation != rotations[-1]:
+                if cube.get_cell_color(face_num, cell) == pos:
+                    new_pos = face_num * 9 + cell
+                    print(new_pos, end="")
+                    if pos < POSITION_NUM - 1:
                         print(", ", end="")
                     found = True
                     break
 
             if found:
                 break
-    print("),")
+    print(BRACKETS[1] + ",")
+print(BRACKETS[1])
