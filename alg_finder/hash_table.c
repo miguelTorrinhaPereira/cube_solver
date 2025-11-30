@@ -41,11 +41,12 @@
 
 	@return the hash of the string.
 */
-static uint32_t hash_function(char *str) {
+static uint32_t hash_function(uint8_t *key, uint32_t key_size) {
 	uint32_t h = HASH_SEED;
 
-	for (; *str != '\0'; ++str) {
-		h ^= *str;
+	uint8_t *end = key + key_size;
+	for (; key < end; key++) {
+		h ^= *key;
 		h *= HASH_MULT_FACTOR;
 		h ^= h >> HASH_SHIFT_FACTOR;
 	}
@@ -77,11 +78,14 @@ static inline uint32_t get_index(uint32_t hash, uint32_t capacity) {
 	@param capacity the capacity (or size) of the table.
 	@param new_entry a pointer to the entry to be inserted.
 */
-static void insert_entry(HT_entry **table, uint32_t capacity,
+//TODO: don't put if the element is already there
+static void insert_entry(_Atomic(HT_entry *)*table, uint32_t capacity,
 							HT_entry *new_entry) {
 	uint32_t index = get_index(new_entry->hash, capacity);
-	new_entry->next = table[index];
-	table[index] = new_entry;
+
+	do {
+		new_entry->next = table[index];
+	} while(!atomic_compare_exchange_weak(&table[index], &new_entry->next, new_entry));
 }
 
 
@@ -92,7 +96,7 @@ static void insert_entry(HT_entry **table, uint32_t capacity,
 
 	@return a pointer to the new hash table, NULL if it couldn't be create.
 */
-Hash_table *create_hash_table(uint32_t capacity) {
+Hash_table *create_hash_table(uint32_t capacity, uint32_t key_size) {
 	Hash_table *hash_table;
 	uint32_t old_capacity;
 	// capacity must be a power of two.
@@ -113,7 +117,8 @@ Hash_table *create_hash_table(uint32_t capacity) {
 
 	hash_table->capacity = capacity;
 	hash_table->count = 0;
-	hash_table->table = (HT_entry **) calloc(capacity, sizeof(HT_entry *));
+	hash_table->key_size = key_size;
+	hash_table->table = (_Atomic(HT_entry *)*) calloc(capacity, sizeof(HT_entry *));
 
 	if (hash_table->table == NULL)
 		return NULL;
@@ -129,12 +134,12 @@ Hash_table *create_hash_table(uint32_t capacity) {
 	@param new_capacity the new capacity for the hash table.
 */
 void resize_hash_table(Hash_table *hash_table, uint32_t new_capacity) {
-	HT_entry **new_table;
+	_Atomic(HT_entry *)*new_table;
 	HT_entry *current = first_entry(hash_table), *next;
 
 	// Should never give an error because of lack of memory,
 	// since the hash table is still functional.
-	new_table = (HT_entry **) calloc(new_capacity, sizeof(HT_entry *));
+	new_table = (_Atomic(HT_entry *)*) calloc(new_capacity, sizeof(HT_entry *));
 	if (new_table == NULL)
 		return;
 
@@ -156,7 +161,7 @@ void resize_hash_table(Hash_table *hash_table, uint32_t new_capacity) {
 	It has 3 deletion modes:
 	- CLEAR: only deletes the entries.
 	- DELETE: also deletes the hash table itself.
-	- PURGE: also frees the values of the entries.
+	- PURGE: also frees the keys of the entries.
 
 	@param hash_table the hash table.
 	@param mode the deletion mode to be used.
@@ -167,7 +172,7 @@ void delete_hash_table(Hash_table *hash_table, Deletion_mode mode) {
 	while (current != NULL) {
 		next = next_entry(hash_table, current);
 		if (mode == PURGE)
-			free(current->value);
+			free(current->key);
 
 		free(current);
 		current = next;
@@ -207,22 +212,34 @@ static inline float load_factor(Hash_table *hash_table) {
 
 	@return 1 if the new entry couldn't be created, 0 otherwise.
 */
-int insert_ht(Hash_table *hash_table, char *key, void *value) {
+int insert_ht(Hash_table *hash_table, uint8_t *key, uint32_t value) {
 	HT_entry *new_entry = (HT_entry *) malloc(sizeof(HT_entry));
 	if (new_entry == NULL)
 		return 1;
 
 	new_entry->key = key;
 	new_entry->value = value;
-	new_entry->hash = hash_function(key);
+	new_entry->hash = hash_function(key, hash_table->key_size);
 
 	insert_entry(hash_table->table, hash_table->capacity, new_entry);
 
 	hash_table->count++;
-	if (load_factor(hash_table) > MAX_LOAD_FACTOR)
-		resize_hash_table(hash_table, hash_table->capacity * RESIZING_FACTOR);
+	// doesn't work with paralelism without expensive locks
+	// if (load_factor(hash_table) > MAX_LOAD_FACTOR)
+	// 	resize_hash_table(hash_table, hash_table->capacity * RESIZING_FACTOR);
 
 	return 0;
+}
+
+
+static int keys_equal(uint8_t *key1, uint8_t *key2, uint32_t key_size) {
+	uint8_t *end = key1 + key_size;
+
+	while(key1 < end)
+		if(*key1++ != *key2++)
+			return 0;
+
+	return 1;
 }
 
 
@@ -238,15 +255,15 @@ int insert_ht(Hash_table *hash_table, char *key, void *value) {
 
 	@return 1 if no entry with the provided key exists, 0 otherwise.
 */
-int remove_by_key(Hash_table *hash_table, char *key, Deletion_mode mode) {
-	uint32_t hash = hash_function(key);
+int remove_by_key(Hash_table *hash_table, uint8_t *key, Deletion_mode mode) {
+	uint32_t hash = hash_function(key, hash_table->key_size);
 	uint32_t index = get_index(hash, hash_table->capacity);
 	HT_entry *previous, *curr = hash_table->table[index];
 
 	if (curr == NULL) // there isn't a single entry with this index
 		return 1;
 
-	if(hash == curr->hash && !strcmp(key, curr->key))  // is it the first entry?
+	if(hash == curr->hash && keys_equal(key, curr->key, hash_table->key_size))  // is it the first entry?
 		hash_table->table[index] = curr->next;
 	else {  // cycles to the remaining entries
 		do {  // the first entry has already been checked
@@ -255,18 +272,19 @@ int remove_by_key(Hash_table *hash_table, char *key, Deletion_mode mode) {
 
 			if(curr == NULL)
 				return 1;
-		} while (hash != curr->hash || strcmp(key, curr->key));
+		} while (hash != curr->hash || !keys_equal(key, curr->key, hash_table->key_size));
 
 		previous->next = curr->next;
 	}
 
 	if (mode == PURGE)
-		free(curr->value);
+		free(curr->key);
 	free(curr);
 
 	hash_table->count--;
-	if (load_factor(hash_table) < MIN_LOAD_FACTOR)
-		resize_hash_table(hash_table, hash_table->capacity / RESIZING_FACTOR);
+	// doesn't work with paralelism without expensive locks
+	// if (load_factor(hash_table) < MIN_LOAD_FACTOR)
+	// 	resize_hash_table(hash_table, hash_table->capacity / RESIZING_FACTOR);
 
 	return 0;
 }
@@ -280,13 +298,13 @@ int remove_by_key(Hash_table *hash_table, char *key, Deletion_mode mode) {
 
 	@return a pointer to the entry, NULL if no entry with the key exists.
 */
-static HT_entry *get_entry(Hash_table *hash_table, char *key) {
-	uint32_t hash = hash_function(key);
+static HT_entry *get_entry(Hash_table *hash_table, uint8_t *key) {
+	uint32_t hash = hash_function(key, hash_table->key_size);
 	uint32_t index = get_index(hash, hash_table->capacity);
 	HT_entry *entry = hash_table->table[index];
 
 	for (; entry != NULL; entry = entry->next)
-		if (hash == entry->hash && !strcmp(key, entry->key))
+		if (hash == entry->hash && keys_equal(key, entry->key, hash_table->key_size))
 			return entry;
 
 	return NULL;
@@ -298,13 +316,11 @@ static HT_entry *get_entry(Hash_table *hash_table, char *key) {
 
 	@param hash_table the hash table.
 	@param key the key.
-
-	@return a void pointer to the value, NULL if no entry with the key exists.
 */
-void *get_value(Hash_table *hash_table, char *key) {
+uint32_t get_value(Hash_table *hash_table, uint8_t *key) {
 	HT_entry *entry = get_entry(hash_table, key);
 	if (entry == NULL)
-		return NULL;
+		return 0;
 
 	return entry->value;
 }
@@ -318,7 +334,7 @@ void *get_value(Hash_table *hash_table, char *key) {
 
 	@return 1 if the key exists, 0 if it doesn't.
 */
-int exists_key(Hash_table *hash_table, char *key) {
+int exists_key(Hash_table *hash_table, uint8_t *key) {
 	return get_entry(hash_table, key) != NULL;
 }
 
@@ -332,7 +348,7 @@ int exists_key(Hash_table *hash_table, char *key) {
 
 	@return 0 if the key exists, 1 if it doesn't.
 */
-int change_entry(Hash_table *hash_table, char *key, void *new_value) {
+int change_entry(Hash_table *hash_table, uint8_t *key, uint32_t new_value) {
 	HT_entry *entry = get_entry(hash_table, key);
 	if (entry == NULL)
 		return 1;
@@ -381,4 +397,14 @@ HT_entry *next_entry(Hash_table *hash_table, HT_entry *entry) {
 			return hash_table->table[index];
 
 	return NULL;
+}
+
+
+uint32_t get_hash_table_count(Hash_table *hash_table) {
+	return hash_table->count;
+}
+
+
+uint32_t get_hash_table_capacity(Hash_table *hash_table) {
+	return hash_table->capacity;
 }

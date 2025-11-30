@@ -1,31 +1,12 @@
-/** @file hash_table.h
-
-	@brief Header of hash_table.c.
-
-	@author ist1113667 (Miguel Torrinha)
-*/
-
 #ifndef _HASH_TABLE_H
 #define _HASH_TABLE_H
 
 #include <stdint.h>
+#include <stdatomic.h>
 
-/**  @struct HT_entry
-	@brief A hash table entry.
-
-	@var HT_entry::key
-	the key of the entry.
-	@var HT_entry::value
-	the value associated with the key.
-	@var HT_entry::hash
-	the hash of the key. 
-	Unnecessary, but makes the hash table 25% faster.
-	@var HT_entry::next
-	a pointer to the next entry.
-*/
 typedef struct HT_entry {
-	char *key;
-	void *value;
+	uint8_t *key;
+	uint32_t value;
 	uint32_t hash;
 	struct HT_entry *next;
 } HT_entry;
@@ -46,8 +27,9 @@ typedef struct HT_entry {
 */
 typedef struct {
 	uint32_t capacity;
-	uint32_t count;
-	HT_entry **table;
+	_Atomic uint32_t count;
+	uint32_t key_size;
+	_Atomic(HT_entry *)*table;
 } Hash_table;
 
 
@@ -60,16 +42,19 @@ typedef struct {
 typedef enum { CLEAR, DELETE ,PURGE } Deletion_mode;
 
 
-Hash_table *create_hash_table(uint32_t capacity);
+Hash_table *create_hash_table(uint32_t capacity, uint32_t key_size);
 void resize_hash_table(Hash_table *hash_table, uint32_t new_capacity);
 void delete_hash_table(Hash_table *hash_table, Deletion_mode mode);
 
-int insert_ht(Hash_table *hash_table, char *key, void *value);
-int remove_by_key(Hash_table *hash_table, char *key, Deletion_mode mode);
-void *get_value(Hash_table *hash_table, char *key);
-int exists_key(Hash_table *hash_table, char *key);
-int change_entry(Hash_table *hash_table, char *key, void *new_value);
+int insert_ht(Hash_table *hash_table, uint8_t *key, uint32_t value);
+int remove_by_key(Hash_table *hash_table, uint8_t *key, Deletion_mode mode);
+uint32_t get_value(Hash_table *hash_table, uint8_t *key);
+int exists_key(Hash_table *hash_table, uint8_t *key);
+int change_entry(Hash_table *hash_table, uint8_t *key, uint32_t new_value);
 
 HT_entry *next_entry(Hash_table *hash_table, HT_entry *entry);
 HT_entry *first_entry(Hash_table *hash_table);
+
+uint32_t get_hash_table_count(Hash_table *hash_table);
+uint32_t get_hash_table_capacity(Hash_table *hash_table);
 #endif
