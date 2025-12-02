@@ -1,4 +1,4 @@
-#include <stdatomic.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -9,26 +9,25 @@ Queue create_queue() {
 	if(queue == NULL)
 		return NULL;
 
-	Queue_entry *dummy = malloc(sizeof(Queue_entry));
-	if(dummy == NULL) {
-		free(queue);
-		return NULL;
-	}
-	dummy->next = NULL;
-
-	queue->head = dummy;
-	queue->tail = dummy;
+	queue->head = NULL;
+	queue->tail = NULL;
+	pthread_mutex_init(&queue->lock, NULL);
 
 	return queue;
 }
 
 
 void delete_queue(Queue queue) {
-	free(queue->head);
 	free(queue);
 }
 
 
+static bool is_queue_empty(Queue queue) {
+	return queue->head == NULL;
+}
+
+
+#include <stdio.h>
 int push_queue(Queue queue, void *value) {
 	Queue_entry *new_entry = malloc(sizeof(Queue_entry));
 	if(new_entry == NULL)
@@ -37,36 +36,29 @@ int push_queue(Queue queue, void *value) {
 	new_entry->value = value;
 	new_entry->next = NULL;
 
-	Queue_entry *old_tail;
-	Queue_entry *old_next;
-	while(true) {
-		old_tail = queue->tail;
-		old_next = old_tail->next;
-
-		if(old_next == NULL) {
-			if(atomic_compare_exchange_weak(&old_tail->next, &old_next, new_entry)) {
-				atomic_compare_exchange_weak(&queue->tail, &old_tail, new_entry);
-				break;
-			}
-		}
-		else
-			atomic_compare_exchange_weak(&queue->tail, &old_tail, old_next);
-	}
+	pthread_mutex_lock(&queue->lock);
+	if(is_queue_empty(queue))
+		queue->head = new_entry;
+	else
+		queue->tail->next = new_entry;
+	queue->tail = new_entry;
+	pthread_mutex_unlock(&queue->lock);
 
 	return 0;
 }
 
 
 void *pop_queue(Queue queue) {
-	Queue_entry *old_head;
-	do {
-		if(queue->head->next == NULL)
-			return NULL;
-		old_head = queue->head;
-	} while(!atomic_compare_exchange_weak(&queue->head, &old_head, queue->head->next));
+	if(is_queue_empty(queue))
+		return NULL;
 
-	void *value = old_head->next->value;
+	Queue_entry *old_head;
+	pthread_mutex_lock(&queue->lock);
+	old_head = queue->head;
+	queue->head = queue->head->next;
+	pthread_mutex_unlock(&queue->lock);
+
+	void *value = old_head->value;
 	free(old_head);
 	return value;
 }
-
