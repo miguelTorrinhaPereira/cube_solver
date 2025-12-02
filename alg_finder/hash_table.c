@@ -1,5 +1,3 @@
-//TODO: change the Hash_table type to be a pointer
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
