@@ -4,6 +4,7 @@
 
 #include "queue.h"
 
+
 Queue create_queue() {
 	Queue queue = malloc(sizeof(_Queue));
 	if(queue == NULL)
@@ -27,7 +28,6 @@ static bool is_queue_empty(Queue queue) {
 }
 
 
-#include <stdio.h>
 int push_queue(Queue queue, void *value) {
 	Queue_entry *new_entry = malloc(sizeof(Queue_entry));
 	if(new_entry == NULL)

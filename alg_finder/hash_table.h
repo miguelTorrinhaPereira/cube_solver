@@ -8,7 +8,7 @@ typedef struct HT_entry {
 	uint8_t *key;
 	uint32_t value;
 	uint32_t hash;
-	struct HT_entry *next;
+	_Atomic(struct HT_entry *) next;
 } HT_entry;
 
 
@@ -30,7 +30,9 @@ typedef struct {
 	_Atomic uint32_t count;
 	uint32_t key_size;
 	_Atomic(HT_entry *)*table;
-} Hash_table;
+} _Hash_table;
+
+typedef _Hash_table *Hash_table;
 
 
 /** @enum Deletion_mode
@@ -42,19 +44,19 @@ typedef struct {
 typedef enum { CLEAR, DELETE ,PURGE } Deletion_mode;
 
 
-Hash_table *create_hash_table(uint32_t capacity, uint32_t key_size);
-void resize_hash_table(Hash_table *hash_table, uint32_t new_capacity);
-void delete_hash_table(Hash_table *hash_table, Deletion_mode mode);
+Hash_table create_hash_table(uint32_t capacity, uint32_t key_size);
+void resize_hash_table(Hash_table hash_table, uint32_t new_capacity);
+void delete_hash_table(Hash_table hash_table, Deletion_mode mode);
 
-int insert_ht(Hash_table *hash_table, uint8_t *key, uint32_t value);
-int remove_by_key(Hash_table *hash_table, uint8_t *key, Deletion_mode mode);
-uint32_t get_value(Hash_table *hash_table, uint8_t *key);
-int exists_key(Hash_table *hash_table, uint8_t *key);
-int change_entry(Hash_table *hash_table, uint8_t *key, uint32_t new_value);
+int insert_ht(Hash_table hash_table, uint8_t *key, uint32_t value);
+int remove_by_key(Hash_table hash_table, uint8_t *key, Deletion_mode mode);
+uint32_t get_value(Hash_table hash_table, uint8_t *key);
+int exists_key(Hash_table hash_table, uint8_t *key);
+int change_entry(Hash_table hash_table, uint8_t *key, uint32_t new_value);
 
-HT_entry *next_entry(Hash_table *hash_table, HT_entry *entry);
-HT_entry *first_entry(Hash_table *hash_table);
+HT_entry *next_entry(Hash_table hash_table, HT_entry *entry);
+HT_entry *first_entry(Hash_table hash_table);
 
-uint32_t get_hash_table_count(Hash_table *hash_table);
-uint32_t get_hash_table_capacity(Hash_table *hash_table);
+uint32_t get_hash_table_count(Hash_table hash_table);
+uint32_t get_hash_table_capacity(Hash_table hash_table);
 #endif
