@@ -21,7 +21,7 @@ typedef _Queue *Queue;
 
 Queue create_queue();
 void delete_queue(Queue queue);
-int push_queue(Queue queue, void *value);
-void *pop_queue(Queue queue);
+int push(Queue queue, void *value);
+void *pop(Queue queue);
 
 #endif

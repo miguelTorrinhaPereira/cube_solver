@@ -4,8 +4,12 @@
 #include <stdint.h>
 #include <stdatomic.h>
 
+
+#define STATE_SIZE 20
+
+
 typedef struct HT_entry {
-	uint8_t *key;
+	uint8_t key[STATE_SIZE];
 	uint32_t value;
 	uint32_t hash;
 	_Atomic(struct HT_entry *) next;
@@ -28,7 +32,6 @@ typedef struct HT_entry {
 typedef struct {
 	uint32_t capacity;
 	_Atomic uint32_t count;
-	uint32_t key_size;
 	_Atomic(HT_entry *)*table;
 } _Hash_table;
 
@@ -41,10 +44,10 @@ typedef _Hash_table *Hash_table;
 
 	See the documentation of this functions for more details.
 */
-typedef enum { CLEAR, DELETE ,PURGE } Deletion_mode;
 
+typedef enum { CLEAR, DELETE } Deletion_mode;
 
-Hash_table create_hash_table(uint32_t capacity, uint32_t key_size);
+Hash_table create_hash_table(uint32_t capacity);
 void resize_hash_table(Hash_table hash_table, uint32_t new_capacity);
 void delete_hash_table(Hash_table hash_table, Deletion_mode mode);
 

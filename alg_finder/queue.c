@@ -28,7 +28,7 @@ static bool is_queue_empty(Queue queue) {
 }
 
 
-int push_queue(Queue queue, void *value) {
+int push(Queue queue, void *value) {
 	Queue_entry *new_entry = malloc(sizeof(Queue_entry));
 	if(new_entry == NULL)
 		return 1;
@@ -48,7 +48,7 @@ int push_queue(Queue queue, void *value) {
 }
 
 
-void *pop_queue(Queue queue) {
+void *pop(Queue queue) {
 	if(is_queue_empty(queue))
 		return NULL;
 
