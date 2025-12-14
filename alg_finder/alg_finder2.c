@@ -12,21 +12,78 @@
 #include "queue.h"
 
 
-#define MAX_TARGET_DEPTH 7
-#define IGNORE_POS UINT8_MAX
+#define MAX_TARGET_DEPTH 6
 
+typedef struct {
+	uint8_t state[STATE_SIZE];
+	int rotation;
+} shallow_state_t;
 
-uint32_t state_size;
-uint8_t *target_state;
 
 uint32_t thread_count = 0;
 pthread_t *pthread_tids;
 
-Hash_table little_state_hts[MAX_TARGET_DEPTH - 1], big_state_ht;
+Hash_table little_state_hts[MAX_TARGET_DEPTH], big_state_ht;
 
 Queue unsolved_cases, solved_cases, shallow_target_states;
 
 // hash tabe construction barrier
+
+
+uint32_t calc_state_value(uint8_t *depth_rotation, uint32_t depth) {
+	uint32_t value = depth_rotation[0] + 1;
+	for(int i = 1; i < depth; i++) {
+		value *= ROTATIONS_NUM;
+		value += depth_rotation[i] + 1;
+	}
+	return value;
+}
+
+
+void build_hash_tables(shallow_state_t *shallow_state) {
+	uint8_t states[STATE_SIZE * (MAX_TARGET_DEPTH + 1)];
+	uint8_t depth_rotation[MAX_TARGET_DEPTH] = {};
+	uint32_t curr_depth = 1;
+	uint8_t *state_p = states + STATE_SIZE;
+
+	memcpy(&states[STATE_SIZE], shallow_state->state, STATE_SIZE);
+	depth_rotation[0] = shallow_state->rotation;
+
+	insert_ht(little_state_hts[1], &states[STATE_SIZE], calc_state_value(depth_rotation, curr_depth));
+
+	while(curr_depth > 0) {
+		if(depth_rotation[curr_depth] == ROTATIONS_NUM) {
+			curr_depth--;
+			depth_rotation[curr_depth]++;
+			state_p -= STATE_SIZE;
+			continue;
+		}
+
+		uint8_t *end = state_p + STATE_SIZE;
+		uint8_t *next_state_p = end;
+		if(curr_depth < MAX_TARGET_DEPTH - 1) {
+			while(state_p < end)
+				*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
+
+			curr_depth++;
+			depth_rotation[curr_depth] = 0;
+			insert_ht(little_state_hts[curr_depth], state_p, calc_state_value(depth_rotation, curr_depth));
+		}
+		else {
+			next_state_p = end = state_p + STATE_SIZE;
+			while(depth_rotation[MAX_TARGET_DEPTH - 1] < ROTATIONS_NUM) {
+				while(state_p < end)
+					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
+
+				insert_ht(big_state_ht, end, calc_state_value(depth_rotation, MAX_TARGET_DEPTH));
+				depth_rotation[MAX_TARGET_DEPTH - 1]++;
+
+				state_p -= STATE_SIZE;
+				next_state_p = end;
+			}
+		}
+	}
+}
 
 
 void giveup_case(void *current_case) {
@@ -36,38 +93,15 @@ void giveup_case(void *current_case) {
 
 void *thread_func(void *tid_p) {
 	uint32_t tid = *(uint32_t *)tid_p;
-	// build hash tables
-	// wait for hash table construction barrier
 
-	uint8_t states[state_size * (MAX_TARGET_DEPTH + 1)];
-	memcpy(states, target_state, state_size);
-	uint64_t depth_rotation[MAX_TARGET_DEPTH] = {};
-	uint32_t curr_depth = 0;
-	uint32_t i = 0;
-
-	while(curr_depth != -1) {
-		if(depth_rotation[curr_depth] == ROTATIONS_NUM) {
-			i -= state_size;
-			curr_depth--;
-			continue;
-		}
-
-		if(depth_rotation[curr_depth] == 0) {
-			uint64_t value = 0;
-			for(int depth = 0; depth <= MAX_TARGET_DEPTH; depth++) {
-
-			}
-		}
-
-
-		if(curr_depth < MAX_TARGET_DEPTH) {
-			depth_rotation[curr_depth]++;
-		}
-		else {
-			insert_ht(big_state_ht, states + i, value);
-			curr_depth--;
-		}
+	shallow_state_t *shallow_state;
+	while((shallow_state = pop(shallow_target_states)) != NULL) {
+		printf("thread %d pickup shallow_state %d\n", tid, shallow_state->rotation);
+		build_hash_tables(shallow_state);
+		printf("thread %d did shallow_state %d\n", tid, shallow_state->rotation);
+		free(shallow_state);
 	}
+	// wait for hash table construction barrier
 
 	// case_t *current_case = NULL;
 	// pthread_cleanup_push(giveup_case, &current case)
@@ -114,22 +148,33 @@ int main(int argc, char *argv[]) {
 	// read the cases and setup the linked lists
 	// initialize semapohres
 	// initialize counter of cases left, normal int
-	state_size = 20;
-	target_state = calloc(sizeof(uint8_t), state_size);
-	target_state[0] = 23;
-	target_state[1] = 20;
-	target_state[2] = 21;
-	target_state[3] = 22;
+	uint8_t target_state[STATE_SIZE] = {};
+	for(int i = 0; i < STATE_SIZE; i++)
+		target_state[i] = i;
+	// 	target_state[i] = 4;
+	// target_state[0] = 23;
+	// target_state[1] = 20;
+	// target_state[2] = 21;
+	// target_state[3] = 22;
+
 	unsolved_cases = create_queue();
 	solved_cases = create_queue();
 
 	//TODO: determine a better initial capacity
-	for(int i = 0; i < MAX_TARGET_DEPTH - 1; i++)
-		little_state_hts[i] = create_hash_table(pow(15, i), state_size);
+	for(int i = 0; i < MAX_TARGET_DEPTH; i++)
+		little_state_hts[i] = create_hash_table(pow(16, i));
+	big_state_ht = create_hash_table(pow(16, MAX_TARGET_DEPTH));
 	insert_ht(little_state_hts[0], target_state, 0);
-	big_state_ht = create_hash_table(pow(15, MAX_TARGET_DEPTH), state_size);
 
 	shallow_target_states = create_queue();
+	for(int rotation = 0; rotation < ROTATIONS_NUM; rotation++) {
+		shallow_state_t *shallow_state = malloc(sizeof(shallow_state_t));
+		shallow_state->rotation = rotation;
+		for(int i = 0;  i < STATE_SIZE; i++)
+			shallow_state->state[i] = turn_outcome[rotation][target_state[i]];
+
+		push(shallow_target_states, shallow_state);
+	}
 
 	//construct struct sigaction
 	// sigaction(SIG_INT, sig, NULL);
@@ -155,5 +200,9 @@ int main(int argc, char *argv[]) {
 	// deactivate SIG_INT
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
+
+	for(int ht_idx = 0; ht_idx < MAX_TARGET_DEPTH; ht_idx++)
+		printf("ht %d size %d capacity %d\n", ht_idx, get_hash_table_count(little_state_hts[ht_idx]), get_hash_table_capacity(little_state_hts[ht_idx]));
+	printf("ht %d size %d capacity %d\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
 	write_cases();
 }
