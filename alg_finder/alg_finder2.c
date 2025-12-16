@@ -135,8 +135,11 @@ void write_cases() {
 
 
 void sig_int_handler(int signum) {
-	// cancel every thread
-	// join every thread
+	for(int i = 0; i < thread_count; i++)
+		pthread_cancel(pthread_tids[i]);
+
+	for(int i = 0; i < thread_count; i++)
+		pthread_join(pthread_tids[i], NULL);
 
 	write_cases();
 }
@@ -185,7 +188,11 @@ int main(int argc, char *argv[]) {
 	sigemptyset(&SIGINT_mask);
 	sigaddset(&SIGINT_mask, SIGINT);
 	sigprocmask(SIG_BLOCK, &SIGINT_mask, NULL);
-	// sigaction(SIG_INT, sig, NULL);
+
+	struct sigaction sig_act = {};
+	sig_act.sa_handler = sig_int_handler;
+	sigaction(SIGINT, &sig_act, NULL);
+
 
 	thread_count = get_nprocs();
 
@@ -211,6 +218,7 @@ int main(int argc, char *argv[]) {
 
 	
 	pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
+
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
 
