@@ -27,7 +27,7 @@ Hash_table little_state_hts[MAX_TARGET_DEPTH], big_state_ht;
 
 Queue unsolved_cases, solved_cases, shallow_target_states;
 
-// hash tabe construction barrier
+pthread_barrier_t ht_construction_barrier;
 
 
 uint32_t calc_state_value(uint8_t *depth_rotation, uint32_t depth) {
@@ -101,7 +101,7 @@ void *thread_func(void *tid_p) {
 		printf("thread %d did shallow_state %d\n", tid, shallow_state->rotation);
 		free(shallow_state);
 	}
-	// wait for hash table construction barrier
+	pthread_barrier_wait(&ht_construction_barrier);
 
 	// case_t *current_case = NULL;
 	// pthread_cleanup_push(giveup_case, &current case)
@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
 	//block SIG_INT with sigprocmask
 
 	thread_count = get_nprocs();
-	//initialize the barrier for the building of the hash tables
+	pthread_barrier_init(&ht_construction_barrier, NULL, thread_count);
 	pthread_tids = calloc(thread_count, sizeof(pthread_t));
 	uint32_t *tids = calloc(thread_count, sizeof(uint32_t));
 	for(int i = 0; i < thread_count; i++) {
