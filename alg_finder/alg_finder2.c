@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <signal.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <sys/sysinfo.h>
 #include <stdbool.h>
 
@@ -26,6 +28,7 @@ pthread_t *pthread_tids;
 Hash_table little_state_hts[MAX_TARGET_DEPTH], big_state_ht;
 
 Queue unsolved_cases, solved_cases, shallow_target_states;
+sem_t solved_cases_sem;
 
 pthread_barrier_t ht_construction_barrier;
 
@@ -117,6 +120,7 @@ void *thread_func(void *tid_p) {
 	// deactivate canceling
 	// put the current case in the solved cases list
 	// set current case to NULL
+	// signal semaphore
 	// activate canceling
 
 	//if the cases list isn't empty, repeat
@@ -148,14 +152,15 @@ int main(int argc, char *argv[]) {
 	// read the cases and setup the linked lists
 	// initialize semapohres
 	// initialize counter of cases left, normal int
+	int unsolved_cases_num = 10;
 	uint8_t target_state[STATE_SIZE] = {};
 	for(int i = 0; i < STATE_SIZE; i++)
 		target_state[i] = i;
 	// 	target_state[i] = 4;
-	// target_state[0] = 23;
-	// target_state[1] = 20;
-	// target_state[2] = 21;
-	// target_state[3] = 22;
+	target_state[0] = 23;
+	target_state[1] = 20;
+	target_state[2] = 21;
+	target_state[3] = 22;
 
 	unsolved_cases = create_queue();
 	solved_cases = create_queue();
@@ -176,12 +181,17 @@ int main(int argc, char *argv[]) {
 		push(shallow_target_states, shallow_state);
 	}
 
-	//construct struct sigaction
+	sigset_t SIGINT_mask;
+	sigemptyset(&SIGINT_mask);
+	sigaddset(&SIGINT_mask, SIGINT);
+	sigprocmask(SIG_BLOCK, &SIGINT_mask, NULL);
 	// sigaction(SIG_INT, sig, NULL);
-	//block SIG_INT with sigprocmask
 
 	thread_count = get_nprocs();
+
+	sem_init(&solved_cases_sem, 0, 0);
 	pthread_barrier_init(&ht_construction_barrier, NULL, thread_count);
+
 	pthread_tids = calloc(thread_count, sizeof(pthread_t));
 	uint32_t *tids = calloc(thread_count, sizeof(uint32_t));
 	for(int i = 0; i < thread_count; i++) {
@@ -189,15 +199,18 @@ int main(int argc, char *argv[]) {
 		pthread_create(&pthread_tids[i], NULL, thread_func, &tids[i]);
 	}
 
-	//unblock SIG_INT with sigprocmask
-
-	//wait for the semapohre to write elements from the solved cases list
-	// and decrement counter for every write
-	// whe it reaches 0, stop write loop
-	// block and unblock SIG_INT when writing and when waiting.
+	pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
+	
+	while (unsolved_cases_num) {
+		sem_wait(&solved_cases_sem);
+		pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
+		//write case
+		unsolved_cases_num--;
+		pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
+	}
 
 	
-	// deactivate SIG_INT
+	pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
 
