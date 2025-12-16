@@ -82,8 +82,7 @@ static int keys_equal(uint8_t *key1, uint8_t *key2) {
 	@param new_entry a pointer to the entry to be inserted.
 */
 static int insert_entry(Hash_table hash_table, HT_entry *new_entry) {
-	uint32_t hash = hash_function(new_entry->key);
-	uint32_t index = get_index(hash, hash_table->capacity);
+	uint32_t index = get_index(new_entry->hash, hash_table->capacity);
 	HT_entry *entry = hash_table->table[index], *next;
 
 	if(entry == NULL && atomic_compare_exchange_strong(&hash_table->table[index], &entry, new_entry))
@@ -91,10 +90,10 @@ static int insert_entry(Hash_table hash_table, HT_entry *new_entry) {
 
 	next = entry->next;
 	while(1) {
-		if(hash == entry->hash && keys_equal(new_entry->key, entry->key))
+		if(new_entry->hash == entry->hash && keys_equal(new_entry->key, entry->key))
 			return 1;
 
-		if(next == NULL && atomic_compare_exchange_weak(&entry->next, &next, new_entry))
+		if(next == NULL && atomic_compare_exchange_strong(&entry->next, &next, new_entry))
 			break;
 
 		entry = next;
