@@ -20,6 +20,7 @@ typedef _Queue *Queue;
 
 Queue create_queue();
 void delete_queue(Queue queue);
+static bool is_queue_empty(Queue queue);
 int push(Queue queue, void *value);
 void *pop(Queue queue);
 
