@@ -18,8 +18,13 @@
 
 typedef struct {
 	uint8_t state[STATE_SIZE];
-	int rotation;
-} shallow_state_t;
+	int info;
+} unsolved_state_t;
+
+typedef struct {
+	uint8_t state[STATE_SIZE];
+	char *alg;
+} solved_state_t;
 
 
 uint32_t thread_count = 0;
@@ -43,14 +48,14 @@ uint32_t calc_state_value(uint8_t *depth_rotation, uint32_t depth) {
 }
 
 
-void build_hash_tables(shallow_state_t *shallow_state) {
+void build_hash_tables(unsolved_state_t *shallow_state) {
 	uint8_t states[STATE_SIZE * (MAX_TARGET_DEPTH + 1)];
 	uint8_t depth_rotation[MAX_TARGET_DEPTH] = {};
 	uint32_t curr_depth = 1;
 	uint8_t *state_p = states + STATE_SIZE;
 
 	memcpy(&states[STATE_SIZE], shallow_state->state, STATE_SIZE);
-	depth_rotation[0] = shallow_state->rotation;
+	depth_rotation[0] = shallow_state->info;
 
 	insert_ht(little_state_hts[1], &states[STATE_SIZE], calc_state_value(depth_rotation, curr_depth));
 
@@ -89,48 +94,55 @@ void build_hash_tables(shallow_state_t *shallow_state) {
 }
 
 
-void giveup_case(void *current_case) {
-	// put the current case in unsolved case list if it isn't NULL
+void giveup_case(void *arg) {
+	unsolved_state_t *current_case = arg;
+
+	if(current_case != NULL)
+		push(unsolved_cases, current_case);
 }
 
 
 void *thread_func(void *tid_p) {
 	uint32_t tid = *(uint32_t *)tid_p;
 
-	shallow_state_t *shallow_state;
+	unsolved_state_t *shallow_state;
 	while((shallow_state = pop(shallow_target_states)) != NULL) {
-		printf("thread %d pickup shallow_state %d\n", tid, shallow_state->rotation);
+		printf("thread %d pickup shallow_state %d\n", tid, shallow_state->info);
 		build_hash_tables(shallow_state);
-		printf("thread %d did shallow_state %d\n", tid, shallow_state->rotation);
+		printf("thread %d did shallow_state %d\n", tid, shallow_state->info);
 		free(shallow_state);
 	}
 	pthread_barrier_wait(&ht_construction_barrier);
 
-	// case_t *current_case = NULL;
-	// pthread_cleanup_push(giveup_case, &current case)
+	unsolved_state_t *current_case = NULL;
 
-	// deactivate canceling
-	// set current case to the first of the cases list
-	// remove it from the list
-	// activate canceling
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+	pthread_cleanup_push(giveup_case, &current_case);
 
-	// check if case is in the little and big hash table
-	// if, not, start the search
+	while(true) {
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+		current_case = pop(unsolved_cases);
+		if(current_case == NULL)
+			break;
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 
-	// deactivate canceling
-	// put the current case in the solved cases list
-	// set current case to NULL
-	// signal semaphore
-	// activate canceling
+		// check if case is in the little and big hash table
+		// if, not, start the search
 
-	//if the cases list isn't empty, repeat
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+		// reconstruct the alg
+		// crate the new solved case and put it in the solved cases list
+		current_case = NULL;
+		sem_post(&solved_cases_sem);
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+	}
 
+	pthread_cleanup_pop(0);
 	return NULL;
 }
 
-void write_cases() {
-	// write solved cases
-	// write unsolved cases if any
+void write_unsolved_cases() {
+	
 }
 
 
@@ -141,7 +153,8 @@ void sig_int_handler(int signum) {
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
 
-	write_cases();
+	// write solved cases
+	// write unsolved cases
 }
 
 
@@ -155,7 +168,7 @@ int main(int argc, char *argv[]) {
 	// read the cases and setup the linked lists
 	// initialize semapohres
 	// initialize counter of cases left, normal int
-	int unsolved_cases_num = 10;
+	int unsolved_cases_count = 10;
 	uint8_t target_state[STATE_SIZE] = {};
 	for(int i = 0; i < STATE_SIZE; i++)
 		target_state[i] = i;
@@ -176,8 +189,8 @@ int main(int argc, char *argv[]) {
 
 	shallow_target_states = create_queue();
 	for(int rotation = 0; rotation < ROTATIONS_NUM; rotation++) {
-		shallow_state_t *shallow_state = malloc(sizeof(shallow_state_t));
-		shallow_state->rotation = rotation;
+		unsolved_state_t *shallow_state = malloc(sizeof(unsolved_state_t));
+		shallow_state->info = rotation;
 		for(int i = 0;  i < STATE_SIZE; i++)
 			shallow_state->state[i] = turn_outcome[rotation][target_state[i]];
 
@@ -208,22 +221,22 @@ int main(int argc, char *argv[]) {
 
 	pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
 	
-	while (unsolved_cases_num) {
+	while (unsolved_cases) {
 		sem_wait(&solved_cases_sem);
 		pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
-		//write case
-		unsolved_cases_num--;
+		//write solved case
+		unsolved_cases--;
 		pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
 	}
 
-	
+	// cleaup sequence, no cases all left, all threads have exited
 	pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
 
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
 
-	for(int ht_idx = 0; ht_idx < MAX_TARGET_DEPTH; ht_idx++)
-		printf("ht %d size %d capacity %d\n", ht_idx, get_hash_table_count(little_state_hts[ht_idx]), get_hash_table_capacity(little_state_hts[ht_idx]));
-	printf("ht %d size %d capacity %d\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
-	write_cases();
+	// debug
+	// for(int ht_idx = 0; ht_idx < MAX_TARGET_DEPTH; ht_idx++)
+	// 	printf("ht %d size %d capacity %d\n", ht_idx, get_hash_table_count(little_state_hts[ht_idx]), get_hash_table_capacity(little_state_hts[ht_idx]));
+	// printf("ht %d size %d capacity %d\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
 }
