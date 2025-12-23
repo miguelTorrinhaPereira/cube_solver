@@ -1,3 +1,4 @@
+//TODO: don't do unecessary moves
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -45,6 +46,59 @@ uint32_t calc_state_value(uint8_t *depth_rotation, uint32_t depth) {
 		value += depth_rotation[i] + 1;
 	}
 	return value;
+}
+
+
+void solve_case(uint8_t state[STATE_SIZE], int max_initial_depth) {
+	uint8_t states[STATE_SIZE * (max_initial_depth + 1)];
+	uint8_t depth_rotation[max_initial_depth] = {};
+	int curr_depth = 0;
+	uint8_t *state_p = states;
+
+	memcpy(&states[0], state, STATE_SIZE);
+
+	//TEMP
+	int i = 0;
+
+	while(curr_depth >= 0) {
+		if(depth_rotation[curr_depth] == ROTATIONS_NUM) {
+			curr_depth--;
+			depth_rotation[curr_depth]++;
+			state_p -= STATE_SIZE;
+			continue;
+		}
+
+		uint8_t *end = state_p + STATE_SIZE;
+		uint8_t *next_state_p = end;
+		if(curr_depth < max_initial_depth - 1) {
+			while(state_p < end)
+				*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
+
+			curr_depth++;
+			depth_rotation[curr_depth] = 0;
+			if(exists_key(big_state_ht, end)) {
+				puts("got it!");
+				return;
+			}
+		}
+		else {
+			next_state_p = end = state_p + STATE_SIZE;
+			while(depth_rotation[max_initial_depth - 1] < ROTATIONS_NUM) {
+				while(state_p < end)
+					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
+
+				if(exists_key(big_state_ht, end)) {
+					puts("got it!");
+					return;
+				}
+
+				depth_rotation[max_initial_depth - 1]++;
+
+				state_p -= STATE_SIZE;
+				next_state_p = end;
+			}
+		}
+	}
 }
 
 
@@ -129,9 +183,11 @@ void *thread_func(void *tid_p) {
 		// check if case is in the little and big hash table
 		// if, not, start the search
 
+
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 		// reconstruct the alg
 		// crate the new solved case and put it in the solved cases list
+		free(current_case);
 		current_case = NULL;
 		sem_post(&solved_cases_sem);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
@@ -168,23 +224,17 @@ int main(int argc, char *argv[]) {
 	// read the cases and setup the linked lists
 	// initialize semapohres
 	// initialize counter of cases left, normal int
-	int unsolved_cases_count = 10;
-	uint8_t target_state[STATE_SIZE] = {};
-	for(int i = 0; i < STATE_SIZE; i++)
-		target_state[i] = i;
-	// 	target_state[i] = 4;
-	target_state[0] = 23;
-	target_state[1] = 20;
-	target_state[2] = 21;
-	target_state[3] = 22;
+	int unsolved_cases_count = 0;
+	uint8_t target_state[STATE_SIZE] = { 5, 14, 23, 32, 54, 1, 2, 3, 4, 5, 6, 7, 8};
+	// for(int i = 0; i < STATE_SIZE; i++)
+	// 	target_state[i] = i;
 
 	unsolved_cases = create_queue();
 	solved_cases = create_queue();
 
-	//TODO: determine a better initial capacity
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++)
 		little_state_hts[i] = create_hash_table(pow(16, i));
-	big_state_ht = create_hash_table(pow(16, MAX_TARGET_DEPTH));
+	big_state_ht = create_hash_table(pow(17, MAX_TARGET_DEPTH));
 	insert_ht(little_state_hts[0], target_state, 0);
 
 	shallow_target_states = create_queue();
@@ -220,8 +270,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
-	
-	while (unsolved_cases) {
+
+	while (unsolved_cases_count) {
 		sem_wait(&solved_cases_sem);
 		pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
 		//write solved case
@@ -238,5 +288,5 @@ int main(int argc, char *argv[]) {
 	// debug
 	// for(int ht_idx = 0; ht_idx < MAX_TARGET_DEPTH; ht_idx++)
 	// 	printf("ht %d size %d capacity %d\n", ht_idx, get_hash_table_count(little_state_hts[ht_idx]), get_hash_table_capacity(little_state_hts[ht_idx]));
-	// printf("ht %d size %d capacity %d\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
+	// printf("ht %d size %d capacity %u\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
 }
