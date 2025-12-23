@@ -122,6 +122,7 @@ Hash_table create_hash_table(uint32_t capacity) {
 		// it changes to the smallest power of two that
 		// fits in an int variable that is equal or greater than it.
 		old_capacity = capacity;
+		capacity = 1;
 		while (capacity < old_capacity && capacity < MAX_POWER_OF_2)
 			capacity <<= 1;
 	}
