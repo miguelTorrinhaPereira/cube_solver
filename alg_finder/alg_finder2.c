@@ -1,4 +1,5 @@
 //TODO: don't do unecessary moves
+//TODO: devide main into multiple functions
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -180,11 +181,13 @@ void *thread_func(void *tid_p) {
 			break;
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 
+		//TODO:
 		// check if case is in the little and big hash table
 		// if, not, start the search
 
 
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+		//TODO:
 		// reconstruct the alg
 		// crate the new solved case and put it in the solved cases list
 		free(current_case);
@@ -209,6 +212,7 @@ void sig_int_handler(int signum) {
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
 
+	//TODO:
 	// write solved cases
 	// write unsolved cases
 }
@@ -220,6 +224,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	//TODO:
 	// open file
 	// read the cases and setup the linked lists
 	// initialize semapohres
@@ -274,6 +279,7 @@ int main(int argc, char *argv[]) {
 	while (unsolved_cases_count) {
 		sem_wait(&solved_cases_sem);
 		pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
+		//TODO:
 		//write solved case
 		unsolved_cases--;
 		pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
