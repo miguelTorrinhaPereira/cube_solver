@@ -3,7 +3,7 @@ rotations = ("L", "L2", "L'", "F", "F2", "F'", "R", "R2", "R'", "B", "B2", "B'",
 letter_to_face_num = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
 #   U
 # L F R B
-#   B
+#   D
 #
 #   4
 # 0 1 2 3
