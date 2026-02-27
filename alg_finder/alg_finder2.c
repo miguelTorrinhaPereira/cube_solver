@@ -247,7 +247,7 @@ int main(int argc, char *argv[]) {
 	solved_cases = create_queue();
 
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++)
-		little_state_hts[i] = create_hash_table(pow(16, i));
+		little_state_hts[i] = create_hash_table(pow(16, i) + 10);  // in little hash talble level 1, there are 18 entries, 18 > 16
 	big_state_ht = create_hash_table(pow(17, MAX_TARGET_DEPTH));
 	insert_ht(little_state_hts[0], target_state, 0);
 
