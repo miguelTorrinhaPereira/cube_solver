@@ -1,4 +1,3 @@
-//TODO: don't do unecessary moves
 //TODO: devide main into multiple functions
 #include <stdint.h>
 #include <stdlib.h>
@@ -125,6 +124,11 @@ void build_hash_tables(unsolved_state_t *shallow_state) {
 		uint8_t *end = state_p + STATE_SIZE;
 		uint8_t *next_state_p = end;
 		if(curr_depth < MAX_TARGET_DEPTH - 1) {
+			if(depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
+				depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
+				continue;
+			}
+
 			while(state_p < end)
 				*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
@@ -135,6 +139,11 @@ void build_hash_tables(unsolved_state_t *shallow_state) {
 		else {
 			next_state_p = end = state_p + STATE_SIZE;
 			while(depth_rotation[MAX_TARGET_DEPTH - 1] < ROTATIONS_NUM) {
+				if(depth_rotation[MAX_TARGET_DEPTH - 2] / 3 == depth_rotation[MAX_TARGET_DEPTH - 1] / 3) {
+					depth_rotation[MAX_TARGET_DEPTH - 1] = 3 * (depth_rotation[MAX_TARGET_DEPTH - 2] / 3 + 1);
+					continue;
+				}
+
 				while(state_p < end)
 					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
@@ -292,7 +301,7 @@ int main(int argc, char *argv[]) {
 		pthread_join(pthread_tids[i], NULL);
 
 	// debug
-	// for(int ht_idx = 0; ht_idx < MAX_TARGET_DEPTH; ht_idx++)
-	// 	printf("ht %d size %d capacity %d\n", ht_idx, get_hash_table_count(little_state_hts[ht_idx]), get_hash_table_capacity(little_state_hts[ht_idx]));
-	// printf("ht %d size %d capacity %u\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
+	for(int ht_idx = 0; ht_idx < MAX_TARGET_DEPTH; ht_idx++)
+		printf("ht %d size %d capacity %d\n", ht_idx, get_hash_table_count(little_state_hts[ht_idx]), get_hash_table_capacity(little_state_hts[ht_idx]));
+	printf("ht %d size %d capacity %u\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
 }
