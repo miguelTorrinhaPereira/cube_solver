@@ -79,7 +79,7 @@ static int insert_entry(Hash_table hash_table, HT_entry *new_entry) {
 	uint32_t index = get_index(new_entry->hash, hash_table->capacity);
 	HT_entry *entry = hash_table->table[index], *next;
 
-	if(entry == NULL && atomic_compare_exchange_strong(&hash_table->table[index], &entry, new_entry))
+	if(entry == NULL && atomic_compare_exchange_strong_explicit(&hash_table->table[index], &entry, new_entry, memory_order_release, memory_order_relaxed))
 		return 0;
 
 	next = entry->next;
@@ -87,7 +87,7 @@ static int insert_entry(Hash_table hash_table, HT_entry *new_entry) {
 		if(new_entry->hash == entry->hash && keys_equal(new_entry->key, entry->key))
 			return 1;  // entry already exists
 
-		if(next == NULL && atomic_compare_exchange_strong(&entry->next, &next, new_entry))
+		if(next == NULL && atomic_compare_exchange_strong_explicit(&entry->next, &next, new_entry, memory_order_release, memory_order_relaxed))
 			break;
 
 		entry = next;
