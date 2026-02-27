@@ -15,7 +15,7 @@
 #include "queue.h"
 
 
-#define MAX_TARGET_DEPTH 6
+#define MAX_TARGET_DEPTH 7
 
 typedef struct {
 	uint8_t state[STATE_SIZE];
@@ -239,9 +239,9 @@ int main(int argc, char *argv[]) {
 	// initialize semapohres
 	// initialize counter of cases left, normal int
 	int unsolved_cases_count = 0;
-	uint8_t target_state[STATE_SIZE] = { 5, 14, 23, 32, 54, 1, 2, 3, 4, 5, 6, 7, 8};
-	// for(int i = 0; i < STATE_SIZE; i++)
-	// 	target_state[i] = i;
+	uint8_t target_state[STATE_SIZE];
+	for(int i = 0; i < STATE_SIZE; i++)
+		target_state[i] = i;
 
 	unsolved_cases = create_queue();
 	solved_cases = create_queue();
