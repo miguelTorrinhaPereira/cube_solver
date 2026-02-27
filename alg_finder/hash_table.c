@@ -63,15 +63,8 @@ static inline uint32_t get_index(uint32_t hash, uint32_t capacity) {
 }
 
 
-static int keys_equal(uint8_t *key1, uint8_t *key2) {
-	uint32_t *p1 = (uint32_t *) key1, *p2 = (uint32_t *) key2;
-	uint32_t *end = (uint32_t *)(key1 + STATE_SIZE);
-
-	while(p1 < end)
-		if(*p1++ != *p2++)
-			return 0;
-
-	return 1;
+static inline int keys_equal(uint8_t *key1, uint8_t *key2) {
+	return memcmp(key1, key2, STATE_SIZE) == 0;
 }
 
 
