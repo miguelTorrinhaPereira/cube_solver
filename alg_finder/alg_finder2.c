@@ -1,4 +1,3 @@
-//TODO: don't do unecessary moves
 //TODO: devide main into multiple functions
 #include <stdint.h>
 #include <stdlib.h>
@@ -16,7 +15,7 @@
 #include "queue.h"
 
 
-#define MAX_TARGET_DEPTH 6
+#define MAX_TARGET_DEPTH 7
 
 typedef struct {
 	uint8_t state[STATE_SIZE];
@@ -125,6 +124,11 @@ void build_hash_tables(unsolved_state_t *shallow_state) {
 		uint8_t *end = state_p + STATE_SIZE;
 		uint8_t *next_state_p = end;
 		if(curr_depth < MAX_TARGET_DEPTH - 1) {
+			if(depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
+				depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
+				continue;
+			}
+
 			while(state_p < end)
 				*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
@@ -135,6 +139,11 @@ void build_hash_tables(unsolved_state_t *shallow_state) {
 		else {
 			next_state_p = end = state_p + STATE_SIZE;
 			while(depth_rotation[MAX_TARGET_DEPTH - 1] < ROTATIONS_NUM) {
+				if(depth_rotation[MAX_TARGET_DEPTH - 2] / 3 == depth_rotation[MAX_TARGET_DEPTH - 1] / 3) {
+					depth_rotation[MAX_TARGET_DEPTH - 1] = 3 * (depth_rotation[MAX_TARGET_DEPTH - 2] / 3 + 1);
+					continue;
+				}
+
 				while(state_p < end)
 					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
@@ -238,7 +247,7 @@ int main(int argc, char *argv[]) {
 	solved_cases = create_queue();
 
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++)
-		little_state_hts[i] = create_hash_table(pow(16, i));
+		little_state_hts[i] = create_hash_table(pow(16, i) + 10);  // in little hash talble level 1, there are 18 entries, 18 > 16
 	big_state_ht = create_hash_table(pow(17, MAX_TARGET_DEPTH));
 	insert_ht(little_state_hts[0], target_state, 0);
 

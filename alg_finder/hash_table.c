@@ -1,3 +1,4 @@
+//TODO: improve atomic exchange memory ordering
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -91,7 +92,7 @@ static int insert_entry(Hash_table hash_table, HT_entry *new_entry) {
 	next = entry->next;
 	while(1) {
 		if(new_entry->hash == entry->hash && keys_equal(new_entry->key, entry->key))
-			return 1;
+			return 1;  // entry already exists
 
 		if(next == NULL && atomic_compare_exchange_strong(&entry->next, &next, new_entry))
 			break;
@@ -234,8 +235,10 @@ int insert_ht(Hash_table hash_table, uint8_t *key, uint32_t value) {
 	new_entry->value = value;
 	new_entry->hash = hash_function(key);
 
-	if(insert_entry(hash_table, new_entry))
+	if(insert_entry(hash_table, new_entry)) {
+		free(new_entry);
 		return 2;  // already exists
+	}
 
 	hash_table->count++;
 	// doesn't work with paralelism without expensive locks
