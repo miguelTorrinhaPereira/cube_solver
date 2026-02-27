@@ -230,9 +230,9 @@ int main(int argc, char *argv[]) {
 	// initialize semapohres
 	// initialize counter of cases left, normal int
 	int unsolved_cases_count = 0;
-	uint8_t target_state[STATE_SIZE] = { 5, 14, 23, 32, 54, 1, 2, 3, 4, 5, 6, 7, 8};
-	// for(int i = 0; i < STATE_SIZE; i++)
-	// 	target_state[i] = i;
+	uint8_t target_state[STATE_SIZE];
+	for(int i = 0; i < STATE_SIZE; i++)
+		target_state[i] = i;
 
 	unsolved_cases = create_queue();
 	solved_cases = create_queue();
@@ -292,7 +292,7 @@ int main(int argc, char *argv[]) {
 		pthread_join(pthread_tids[i], NULL);
 
 	// debug
-	// for(int ht_idx = 0; ht_idx < MAX_TARGET_DEPTH; ht_idx++)
-	// 	printf("ht %d size %d capacity %d\n", ht_idx, get_hash_table_count(little_state_hts[ht_idx]), get_hash_table_capacity(little_state_hts[ht_idx]));
-	// printf("ht %d size %d capacity %u\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
+	for(int ht_idx = 0; ht_idx < MAX_TARGET_DEPTH; ht_idx++)
+		printf("ht %d size %d capacity %d\n", ht_idx, get_hash_table_count(little_state_hts[ht_idx]), get_hash_table_capacity(little_state_hts[ht_idx]));
+	printf("ht %d size %d capacity %u\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
 }
