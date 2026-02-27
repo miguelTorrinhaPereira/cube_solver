@@ -15,7 +15,7 @@
 #include "queue.h"
 
 
-#define MAX_TARGET_DEPTH 7
+#define MAX_TARGET_DEPTH 6
 
 typedef struct {
 	uint8_t state[STATE_SIZE];
@@ -71,6 +71,11 @@ void solve_case(uint8_t state[STATE_SIZE], int max_initial_depth) {
 		uint8_t *end = state_p + STATE_SIZE;
 		uint8_t *next_state_p = end;
 		if(curr_depth < max_initial_depth - 1) {
+			if(depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
+				depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
+				continue;
+			}
+
 			while(state_p < end)
 				*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
@@ -84,6 +89,11 @@ void solve_case(uint8_t state[STATE_SIZE], int max_initial_depth) {
 		else {
 			next_state_p = end = state_p + STATE_SIZE;
 			while(depth_rotation[max_initial_depth - 1] < ROTATIONS_NUM) {
+				if(depth_rotation[max_initial_depth - 2] / 3 == depth_rotation[max_initial_depth - 1] / 3) {
+					depth_rotation[max_initial_depth - 1] = 3 * (depth_rotation[max_initial_depth - 2] / 3 + 1);
+					continue;
+				}
+
 				while(state_p < end)
 					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
@@ -167,7 +177,7 @@ void giveup_case(void *arg) {
 
 
 void *thread_func(void *tid_p) {
-	uint32_t tid = *(uint32_t *)tid_p;
+	uint32_t tid = (uint32_t)(long long)tid_p;
 
 	unsolved_state_t *shallow_state;
 	while((shallow_state = pop(shallow_target_states)) != NULL) {
@@ -206,6 +216,7 @@ void *thread_func(void *tid_p) {
 	}
 
 	pthread_cleanup_pop(0);
+	printf("thread %d finished\n", tid);
 	return NULL;
 }
 
@@ -224,6 +235,7 @@ void sig_int_handler(int signum) {
 	//TODO:
 	// write solved cases
 	// write unsolved cases
+	exit(1);
 }
 
 
@@ -238,7 +250,7 @@ int main(int argc, char *argv[]) {
 	// read the cases and setup the linked lists
 	// initialize semapohres
 	// initialize counter of cases left, normal int
-	int unsolved_cases_count = 0;
+	int unsolved_cases_count = 1;
 	uint8_t target_state[STATE_SIZE];
 	for(int i = 0; i < STATE_SIZE; i++)
 		target_state[i] = i;
@@ -264,7 +276,7 @@ int main(int argc, char *argv[]) {
 	sigset_t SIGINT_mask;
 	sigemptyset(&SIGINT_mask);
 	sigaddset(&SIGINT_mask, SIGINT);
-	sigprocmask(SIG_BLOCK, &SIGINT_mask, NULL);
+	pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
 
 	struct sigaction sig_act = {};
 	sig_act.sa_handler = sig_int_handler;
@@ -277,11 +289,8 @@ int main(int argc, char *argv[]) {
 	pthread_barrier_init(&ht_construction_barrier, NULL, thread_count);
 
 	pthread_tids = calloc(thread_count, sizeof(pthread_t));
-	uint32_t *tids = calloc(thread_count, sizeof(uint32_t));
-	for(int i = 0; i < thread_count; i++) {
-		tids[i] = i;
-		pthread_create(&pthread_tids[i], NULL, thread_func, &tids[i]);
-	}
+	for(int i = 0; i < thread_count; i++)
+		pthread_create(&pthread_tids[i], NULL, thread_func, (void *)(long long)i);
 
 	pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
 

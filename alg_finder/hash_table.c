@@ -1,4 +1,3 @@
-//TODO: improve atomic exchange memory ordering
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
