@@ -15,7 +15,7 @@
 #include "queue.h"
 
 // max is 7, the hash tables will not work with more, the valeu is only 32 bits
-#define MAX_TARGET_DEPTH 6
+#define MAX_TARGET_DEPTH 7
 
 typedef struct {
 	uint8_t state[STATE_SIZE];
@@ -33,7 +33,7 @@ pthread_t *pthread_tids;
 
 Hash_table little_state_hts[MAX_TARGET_DEPTH], big_state_ht;
 
-Queue unsolved_cases, solved_cases, shallow_target_states;
+Queue unsolved_cases_queue, solved_cases_queue, shallow_target_states_queue;
 sem_t solved_cases_sem;
 
 pthread_barrier_t ht_construction_barrier;
@@ -189,7 +189,7 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 
 void giveup_case(void *arg) {
 	unsolved_case_t *current_case = arg;
-	push(unsolved_cases, current_case);
+	push(unsolved_cases_queue, current_case);
 }
 
 
@@ -203,7 +203,7 @@ void *thread_func(void *tid_p) {
 
 	// construct state hash tables
 	unsolved_case_t *shallow_state;
-	while((shallow_state = pop(shallow_target_states)) != NULL) {
+	while((shallow_state = pop(shallow_target_states_queue)) != NULL) {
 		printf("thread %d pickup shallow_state %d\n", tid, shallow_state->info);
 		build_hash_tables(shallow_state);
 		printf("thread %d did shallow_state %d\n", tid, shallow_state->info);
@@ -225,7 +225,7 @@ void *thread_func(void *tid_p) {
 		found_solution = false;
 
 		// get new unsolved case
-		current_case = pop(unsolved_cases);
+		current_case = pop(unsolved_cases_queue);
 		if(current_case == NULL)
 			break;
 
@@ -242,14 +242,14 @@ void *thread_func(void *tid_p) {
 			memcpy(solved_case->state, current_case->state, STATE_SIZE);
 			solved_case->alg = get_alg_from_values(&initial_moves_state, &target_moves_value);
 
-			push(solved_cases, solved_case);
+			push(solved_cases_queue, solved_case);
 
 			free(current_case);
 			sem_post(&solved_cases_sem);
 		}
 		else {  // try latter with more search depth
 			current_case->info++;
-			push(unsolved_cases, current_case);
+			push(unsolved_cases_queue, current_case);
 		}
 	}
 
@@ -258,8 +258,17 @@ void *thread_func(void *tid_p) {
 	return NULL;
 }
 
-void write_unsolved_cases() {
-	
+void write_solved_case(solved_case_t *solved_case) {
+	for(int i = 0; i < STATE_SIZE; i++)
+		sprintf(stdout, "%d ", solved_case->state[i]);
+	sprintf(stdout, ": %s\n", solved_case->alg);
+}
+
+
+void write_unsolved_case(unsolved_case_t *unsolved_case) {
+	for(int i = 0; i < STATE_SIZE; i++)
+		sprintf(stdout, "%d ", unsolved_case->state[i]);
+	sprintf(stdout, ": %d\n", unsolved_case->info);
 }
 
 
@@ -270,9 +279,18 @@ void sig_int_handler(int signum) {
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
 
-	//TODO:
-	// write solved cases
-	// write unsolved cases
+	solved_case_t *solved_case;
+	while((solved_case = pop(solved_cases_queue)) != NULL) {
+		write_solved_case(solved_case);
+		free(solved_case);
+	}
+
+	unsolved_case_t *unsolved_case;
+	while((unsolved_case = pop(unsolved_cases_queue)) != NULL) {
+		write_unsolved_case(unsolved_case);
+		free(unsolved_case);
+	}
+
 	exit(1);
 }
 
@@ -283,32 +301,32 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	
 	//TODO:
 	// open file
 	// read the cases and setup the linked lists
-	// initialize semapohres
-	// initialize counter of cases left, normal int
-	int unsolved_cases_count = 1;
+	int unsolved_cases_count = 0;
 	uint8_t target_state[STATE_SIZE];
 	for(int i = 0; i < STATE_SIZE; i++)
 		target_state[i] = i;
 
-	unsolved_cases = create_queue();
-	solved_cases = create_queue();
+	unsolved_cases_queue = create_queue();
+	solved_cases_queue = create_queue();
 
+	// create hash tables
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++)
 		little_state_hts[i] = create_hash_table(pow(16, i) + 10);  // in little hash talble level 1, there are 18 entries, 18 > 16
 	big_state_ht = create_hash_table(pow(17, MAX_TARGET_DEPTH));
 	insert_ht(little_state_hts[0], target_state, 0);
 
-	shallow_target_states = create_queue();
+	shallow_target_states_queue = create_queue();
 	for(int rotation = 0; rotation < ROTATIONS_NUM; rotation++) {
 		unsolved_case_t *shallow_state = malloc(sizeof(unsolved_case_t));
 		shallow_state->info = rotation;
 		for(int i = 0;  i < STATE_SIZE; i++)
 			shallow_state->state[i] = turn_outcome[rotation][target_state[i]];
 
-		push(shallow_target_states, shallow_state);
+		push(shallow_target_states_queue, shallow_state);
 	}
 
 	sigset_t SIGINT_mask;
@@ -335,9 +353,10 @@ int main(int argc, char *argv[]) {
 	while (unsolved_cases_count) {
 		sem_wait(&solved_cases_sem);
 		pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
-		//TODO:
-		//write solved case
-		unsolved_cases--;
+		solved_case_t *solved_case = pop(solved_cases_queue);
+		write_solved_case(solved_case);
+		free(solved_case);
+		unsolved_cases_queue--;
 		pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
 	}
 
