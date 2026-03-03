@@ -16,7 +16,6 @@
 
 // max is 7, the hash tables will not work with more, the valeu is only 32 bits
 #define MAX_TARGET_DEPTH 7
-#define BASE_INITIAL_DEPTH 6
 
 typedef struct {
 	uint8_t state[STATE_SIZE];
@@ -314,24 +313,27 @@ int main(int argc, char *argv[]) {
 	int new_num; // used to receive the input since it will be stored as uint8_t
 	FILE *input_file = (argc == 2) ? fopen(argv[1], "r") : stdin;
 
+	int input_state_size;
+	scanf("%u", &input_state_size);
+
 	// read target state
-	for(int i = 0; i < STATE_SIZE; i++) {
-		scanf("%d", &new_num);
+	for(int i = 0; i < input_state_size; i++) {
+		scanf("%u", &new_num);
 		target_state[i] = new_num;
 	}
 
 	//TODO: improve, read base initial depth and read variable size states, (ignore the rest), or read provided state size
 	// read unsolved cases
 	while(true) {
-		if(scanf("%d", &new_num) == EOF)
+		if(scanf("%u", &new_num) == EOF)
 			break;
 
 		unsolved_case_t *new_unsolved_case = malloc(sizeof(unsolved_case_t));
-		new_unsolved_case->info = BASE_INITIAL_DEPTH;
+		scanf("| %u", &new_unsolved_case->info);
 		new_unsolved_case->state[0] = new_num;
 
-		for(int i = 1; i < STATE_SIZE; i++) {
-			scanf("%d", &new_num);
+		for(int i = 1; i < input_state_size; i++) {
+			scanf("%u", &new_num);
 			new_unsolved_case->state[i] = new_num;
 		}
 
