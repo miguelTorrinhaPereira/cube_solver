@@ -16,6 +16,7 @@
 
 // max is 7, the hash tables will not work with more, the valeu is only 32 bits
 #define MAX_TARGET_DEPTH 7
+#define BASE_INITIAL_DEPTH 6
 
 typedef struct {
 	uint8_t state[STATE_SIZE];
@@ -193,6 +194,7 @@ void giveup_case(void *arg) {
 }
 
 
+//TODO: finish
 char *get_alg_from_values(uint64_t *initial_moves_state, uint32_t *target_moves_value) {
 	return NULL;
 }
@@ -296,22 +298,46 @@ void sig_int_handler(int signum) {
 
 
 int main(int argc, char *argv[]) {
-	if(argc != 1) {
-		fprintf(stderr, "Wrong usage: alg_finder <case_file> ");
-		exit(1);
+	if(argc > 2) {
+		fprintf(stderr, "Usage: alg_finder [case_file] ");
+		exit(2);
 	}
 
-	
-	//TODO:
-	// open file
-	// read the cases and setup the linked lists
-	int unsolved_cases_count = 0;
-	uint8_t target_state[STATE_SIZE];
-	for(int i = 0; i < STATE_SIZE; i++)
-		target_state[i] = i;
-
+	// init cases queues
 	unsolved_cases_queue = create_queue();
 	solved_cases_queue = create_queue();
+	sem_init(&solved_cases_sem, 0, 0);  // the solved_cases_queue starts empty
+
+	// setup to read cases from input
+	int unsolved_cases_count = 0;
+	uint8_t target_state[STATE_SIZE];
+	int new_num; // used to receive the input since it will be stored as uint8_t
+	FILE *input_file = (argc == 2) ? fopen(argv[1], "r") : stdin;
+
+	// read target state
+	for(int i = 0; i < STATE_SIZE; i++) {
+		scanf("%d", &new_num);
+		target_state[i] = new_num;
+	}
+
+	//TODO: improve, read base initial depth and read variable size states, (ignore the rest), or read provided state size
+	// read unsolved cases
+	while(true) {
+		if(scanf("%d", &new_num) == EOF)
+			break;
+
+		unsolved_case_t *new_unsolved_case = malloc(sizeof(unsolved_case_t));
+		new_unsolved_case->info = BASE_INITIAL_DEPTH;
+		new_unsolved_case->state[0] = new_num;
+
+		for(int i = 1; i < STATE_SIZE; i++) {
+			scanf("%d", &new_num);
+			new_unsolved_case->state[i] = new_num;
+		}
+
+		push(unsolved_cases_queue, new_unsolved_case);
+		unsolved_cases_count++;
+	}
 
 	// create hash tables
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++)
@@ -319,6 +345,7 @@ int main(int argc, char *argv[]) {
 	big_state_ht = create_hash_table(pow(17, MAX_TARGET_DEPTH));
 	insert_ht(little_state_hts[0], target_state, 0);
 
+	// create shallow target states
 	shallow_target_states_queue = create_queue();
 	for(int rotation = 0; rotation < ROTATIONS_NUM; rotation++) {
 		unsolved_case_t *shallow_state = malloc(sizeof(unsolved_case_t));
@@ -329,27 +356,29 @@ int main(int argc, char *argv[]) {
 		push(shallow_target_states_queue, shallow_state);
 	}
 
+	// setup sigmask for SIGINT
 	sigset_t SIGINT_mask;
 	sigemptyset(&SIGINT_mask);
 	sigaddset(&SIGINT_mask, SIGINT);
 	pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
 
+	// signal handler for SIGINT
 	struct sigaction sig_act = {};
 	sig_act.sa_handler = sig_int_handler;
 	sigaction(SIGINT, &sig_act, NULL);
 
 
 	thread_count = get_nprocs();
-
-	sem_init(&solved_cases_sem, 0, 0);
 	pthread_barrier_init(&ht_construction_barrier, NULL, thread_count);
 
+	// create threads
 	pthread_tids = calloc(thread_count, sizeof(pthread_t));
 	for(int i = 0; i < thread_count; i++)
 		pthread_create(&pthread_tids[i], NULL, thread_func, (void *)(long long)i);
 
 	pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
 
+	// main loop, write new solved cases
 	while (unsolved_cases_count) {
 		sem_wait(&solved_cases_sem);
 		pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
