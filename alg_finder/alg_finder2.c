@@ -1,3 +1,4 @@
+//TODO: try to join big_ht in to the little_ht array, maybe it doesn't hurt performance
 //TODO: devide main into multiple functions
 #include <stdint.h>
 #include <stdlib.h>
@@ -43,23 +44,24 @@ sem_t solved_cases_sem;
 pthread_barrier_t ht_construction_barrier;
 
 
-uint64_t calc_state_value(uint8_t *depth_rotation, uint32_t depth) {
-	uint64_t value = depth_rotation[0] + 1;
+uint64_t calc_state_encoding(uint8_t *depth_rotation, uint32_t depth) {
+	uint64_t encoding = depth_rotation[0] + 1;
 	for(int i = 1; i < depth; i++) {
 		// it is encoded base ROTATIONS_COUNT + 1 so that i don't have to use the digit 0
 		// this is handy when decoding
-		value *= ENCODING_BASE;
-		value += depth_rotation[i] + 1;
+		encoding *= ENCODING_BASE;
+		encoding += depth_rotation[i] + 1;
 	}
-	return value;
+	return encoding;
 }
 
 
-void get_alg_from_values(uint64_t initial_rotations_value, uint32_t target_rotations_value, char *alg) {
+void get_alg_from_state_encoding(uint64_t initial_state_encoding, uint32_t target_state_encoding, char *alg) {
 	const char *rotations_str_buff[GODS_NUMBER];
 
+	// calculate depths (number of moves)
 	uint32_t initial_depth = 0;
-	uint64_t temp_num = initial_rotations_value;
+	uint64_t temp_num = initial_state_encoding;
 	while(temp_num > 0) {
 		temp_num /= ENCODING_BASE;
 		initial_depth++;
@@ -72,21 +74,21 @@ void get_alg_from_values(uint64_t initial_rotations_value, uint32_t target_rotat
 	}
 	uint32_t alg_size = initial_depth + target_depth;
 
+	// decode state encodings to moves
 	uint32_t buff_idx = initial_depth - 1;
 	while(buff_idx >= 0) {
 		// -1 because the rotation is encoding with 1 to ROTATIONS_COUNT, not 0 to ROTATIONS_COUNT - 1
-		uint32_t rotation = initial_rotations_value % ENCODING_BASE - 1;
-		initial_rotations_value /= ENCODING_BASE;
+		uint32_t rotation = initial_state_encoding % ENCODING_BASE - 1;
+		initial_state_encoding /= ENCODING_BASE;
 
 		rotations_str_buff[buff_idx] = rotation_str[rotation];
 
 		buff_idx--;
 	}
-
 	buff_idx = initial_depth;
 	while(buff_idx < alg_size) {
-		uint32_t rotation = target_rotations_value % ENCODING_BASE - 1;
-		target_rotations_value /= ENCODING_BASE;
+		uint32_t rotation = target_state_encoding % ENCODING_BASE - 1;
+		target_state_encoding /= ENCODING_BASE;
 
 		rotation = rotation - 2 * (rotation % 3) + 2;
 		rotations_str_buff[buff_idx] = rotation_str[rotation];
@@ -94,22 +96,23 @@ void get_alg_from_values(uint64_t initial_rotations_value, uint32_t target_rotat
 		buff_idx++;
 	}
 
-	alg[0] = '\0';
+	// joint all moves into one string
+	alg[0] = '\0';  // so strcat can start, it need to be an empty string
 	for(buff_idx = 0; buff_idx < alg_size; buff_idx++)
 		strcat(alg, rotations_str_buff[buff_idx]);
 }
 
 
-bool solve_case_check_hts(uint8_t initial_state[STATE_SIZE], uint32_t *target_rotations_value) {
+bool solve_case_check_hts(uint8_t initial_state[STATE_SIZE], uint32_t *target_state_encoding) {
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++) {
 		if(exists_key(little_state_hts[i], initial_state)) {
-			*target_rotations_value = get_value(little_state_hts[i], initial_state);
+			*target_state_encoding = get_value(little_state_hts[i], initial_state);
 			return true;
 		}
 	}
 
 	if(exists_key(big_state_ht, initial_state)) {
-		*target_rotations_value = get_value(big_state_ht, initial_state);
+		*target_state_encoding = get_value(big_state_ht, initial_state);
 		return true;
 	}
 
@@ -117,7 +120,7 @@ bool solve_case_check_hts(uint8_t initial_state[STATE_SIZE], uint32_t *target_ro
 }
 
 
-bool solve_case_search(uint8_t initial_state[STATE_SIZE], uint32_t max_initial_depth, uint64_t *initial_rotations_value, uint32_t *target_rotations_value) {
+bool solve_case_search(uint8_t initial_state[STATE_SIZE], uint32_t max_initial_depth, uint64_t *initial_state_encoding, uint32_t *target_state_encoding) {
 	uint8_t states[STATE_SIZE * (max_initial_depth + 1)];
 	uint8_t depth_rotation[max_initial_depth] = {};
 	uint32_t curr_depth = 0;
@@ -148,8 +151,8 @@ bool solve_case_search(uint8_t initial_state[STATE_SIZE], uint32_t max_initial_d
 			curr_depth++;
 			depth_rotation[curr_depth] = 0;
 			if(exists_key(big_state_ht, end)) {
-				*initial_state = calc_state_value(depth_rotation, curr_depth);
-				*target_rotations_value = get_value(big_state_ht, end);
+				*initial_state = calc_state_encoding(depth_rotation, curr_depth);
+				*target_state_encoding = get_value(big_state_ht, end);
 				return true;
 			}
 		}
@@ -164,8 +167,8 @@ bool solve_case_search(uint8_t initial_state[STATE_SIZE], uint32_t max_initial_d
 					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
 				if(exists_key(big_state_ht, end)) {
-					*initial_state = calc_state_value(depth_rotation, curr_depth);
-					*target_rotations_value = get_value(big_state_ht, end);
+					*initial_state = calc_state_encoding(depth_rotation, curr_depth);
+					*target_state_encoding = get_value(big_state_ht, end);
 					return true;
 				}
 
@@ -191,7 +194,7 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 	depth_rotation[0] = shallow_state->info;
 
 	// the value will always fit in 32 bits if the maximum search distance is 7
-	insert_ht(little_state_hts[1], &states[STATE_SIZE], (uint32_t)calc_state_value(depth_rotation, curr_depth));
+	insert_ht(little_state_hts[1], &states[STATE_SIZE], (uint32_t)calc_state_encoding(depth_rotation, curr_depth));
 
 	while(curr_depth > 0) {
 		if(depth_rotation[curr_depth] == ROTATIONS_COUNT) {
@@ -214,7 +217,7 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 
 			curr_depth++;
 			depth_rotation[curr_depth] = 0;
-			insert_ht(little_state_hts[curr_depth], state_p, (uint32_t)calc_state_value(depth_rotation, curr_depth));
+			insert_ht(little_state_hts[curr_depth], state_p, (uint32_t)calc_state_encoding(depth_rotation, curr_depth));
 		}
 		else {
 			next_state_p = end = state_p + STATE_SIZE;
@@ -227,7 +230,7 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 				while(state_p < end)
 					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
-				insert_ht(big_state_ht, end, (uint32_t)calc_state_value(depth_rotation, MAX_TARGET_DEPTH));
+				insert_ht(big_state_ht, end, (uint32_t)calc_state_encoding(depth_rotation, MAX_TARGET_DEPTH));
 				depth_rotation[MAX_TARGET_DEPTH - 1]++;
 
 				state_p -= STATE_SIZE;
@@ -258,8 +261,8 @@ void *thread_func(void *tid_p) {
 	pthread_barrier_wait(&ht_construction_barrier);
 
 	unsolved_case_t *current_case;
-	uint64_t initial_rotations_value;  // search depth can go deeper than 7
-	uint32_t target_rotations_value;  // limitation of the hash table
+	uint64_t initial_state_encoding;  // search depth can go deeper than 7
+	uint32_t target_state_encoding;  // limitation of the hash table
 	bool found_solution;
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
@@ -267,7 +270,7 @@ void *thread_func(void *tid_p) {
 	pthread_cleanup_push(giveup_case, &current_case);
 
 	while(true) {
-		target_rotations_value = initial_rotations_value = 0;  // target_rotations_value could not be zero
+		target_state_encoding = initial_state_encoding = 0;  // target_state_encoding could not be zero
 		found_solution = false;
 
 		// get new unsolved case
@@ -277,8 +280,8 @@ void *thread_func(void *tid_p) {
 
 		// try to solve case
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-		if(solve_case_check_hts(current_case->state, &target_rotations_value) ||
-		   solve_case_search(current_case->state, current_case->info, &initial_rotations_value, &target_rotations_value))
+		if(solve_case_check_hts(current_case->state, &target_state_encoding) ||
+		   solve_case_search(current_case->state, current_case->info, &initial_state_encoding, &target_state_encoding))
 			found_solution = true;
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
@@ -286,7 +289,7 @@ void *thread_func(void *tid_p) {
 		if(found_solution) {
 			solved_case_t *solved_case = malloc(sizeof(solved_case_t));
 			memcpy(solved_case->state, current_case->state, STATE_SIZE);
-			get_alg_from_values(initial_rotations_value, target_rotations_value, solved_case->alg);
+			get_alg_from_state_encoding(initial_state_encoding, target_state_encoding, solved_case->alg);
 
 			push(solved_cases_queue, solved_case);
 
