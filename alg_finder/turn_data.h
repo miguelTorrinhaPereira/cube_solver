@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 
-const char *const rotations[] = {"L", "L2", "L'", "F", "F2", "F'", "R", "R2", "R'", "B", "B2", "B'", "U", "U2", "U'", "D", "D2", "D'"};
-#define ROTATIONS_NUM (sizeof(rotations) / sizeof(rotations[0]))
-#define ROTATIONS_PER_FACE (ROTATIONS_NUM / 6)
-#define POSITION_NUM 54
+const char *const rotation_str[] = {"L", "L2", "L'", "F", "F2", "F'", "R", "R2", "R'", "B", "B2", "B'", "U", "U2", "U'", "D", "D2", "D'"};
+#define ROTATIONS_COUNT (sizeof(rotation_str) / sizeof(rotation_str[0]))
+#define ROTATIONS_PER_FACE (ROTATIONS_COUNT / 6)
+#define POSITION_COUNT 54
 
-const uint8_t turn_outcome[ROTATIONS_NUM][POSITION_NUM] = {
+const uint8_t turn_outcome[ROTATIONS_COUNT][POSITION_COUNT] = {
    {2, 5, 8, 1, 4, 7, 0, 3, 6, 45, 10, 11, 48, 13, 14, 51, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 42, 30, 31, 39, 33, 34, 36, 9, 37, 38, 12, 40, 41, 15, 43, 44, 35, 46, 47, 32, 49, 50, 29, 52, 53},
    {8, 7, 6, 5, 4, 3, 2, 1, 0, 35, 10, 11, 32, 13, 14, 29, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 15, 30, 31, 12, 33, 34, 9, 45, 37, 38, 48, 40, 41, 51, 43, 44, 36, 46, 47, 39, 49, 50, 42, 52, 53},
    {6, 3, 0, 7, 4, 1, 8, 5, 2, 36, 10, 11, 39, 13, 14, 42, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 51, 30, 31, 48, 33, 34, 45, 35, 37, 38, 32, 40, 41, 29, 43, 44, 9, 46, 47, 12, 49, 50, 15, 52, 53},
