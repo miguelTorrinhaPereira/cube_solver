@@ -28,7 +28,7 @@ static bool is_queue_empty(Queue queue) {
 }
 
 
-int push(Queue queue, void *value) {
+int push(Queue queue, const void *value) {
 	Queue_entry *new_entry = malloc(sizeof(Queue_entry));
 	if(new_entry == NULL)
 		return 1;
@@ -60,7 +60,7 @@ void *pop(Queue queue) {
 	queue->head = queue->head->next;
 	pthread_mutex_unlock(&queue->lock);
 
-	void *value = old_head->value;
+	const void *value = old_head->value;
 	free(old_head);
-	return value;
+	return (void *)value;  // to discard the const qualifier
 }

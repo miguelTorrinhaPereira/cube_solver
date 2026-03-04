@@ -51,11 +51,11 @@ Hash_table create_hash_table(uint32_t capacity);
 void resize_hash_table(Hash_table hash_table, uint32_t new_capacity);
 void delete_hash_table(Hash_table hash_table, Deletion_mode mode);
 
-int insert_ht(Hash_table hash_table, uint8_t *key, uint32_t value);
-int remove_by_key(Hash_table hash_table, uint8_t *key, Deletion_mode mode);
-uint32_t get_value(Hash_table hash_table, uint8_t *key);
-int exists_key(Hash_table hash_table, uint8_t *key);
-int change_entry(Hash_table hash_table, uint8_t *key, uint32_t new_value);
+int insert_ht(Hash_table hash_table, const uint8_t *key, uint32_t value);
+int remove_by_key(Hash_table hash_table, const uint8_t *key, Deletion_mode mode);
+uint32_t get_value(Hash_table hash_table, const uint8_t *key);
+int exists_key(Hash_table hash_table, const uint8_t *key);
+int change_entry(Hash_table hash_table, const uint8_t *key, uint32_t new_value);
 
 HT_entry *next_entry(Hash_table hash_table, HT_entry *entry);
 HT_entry *first_entry(Hash_table hash_table);

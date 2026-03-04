@@ -5,7 +5,7 @@
 
 
 typedef struct Queue_entry{
-	void *value;
+	const void *value;
 	struct Queue_entry *_Atomic next;
 } Queue_entry;
 
@@ -21,7 +21,7 @@ typedef _Queue *Queue;
 Queue create_queue();
 void delete_queue(Queue queue);
 static bool is_queue_empty(Queue queue);
-int push(Queue queue, void *value);
+int push(Queue queue, const void *value);
 void *pop(Queue queue);
 
 #endif

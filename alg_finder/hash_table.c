@@ -32,10 +32,10 @@
 
 	@return the hash of the string.
 */
-static uint32_t hash_function(uint8_t *key) {
+static uint32_t hash_function(const uint8_t *key) {
 	uint32_t h = HASH_SEED;
 
-	uint8_t *end = key + STATE_SIZE;
+	const uint8_t *end = key + STATE_SIZE;
 	for (; key < end; key++) {
 		h ^= *key;
 		h *= HASH_MULT_FACTOR;
@@ -62,7 +62,7 @@ static inline uint32_t get_index(uint32_t hash, uint32_t capacity) {
 }
 
 
-static inline int keys_equal(uint8_t *key1, uint8_t *key2) {
+static inline int keys_equal(const uint8_t *key1, const uint8_t *key2) {
 	return memcmp(key1, key2, STATE_SIZE) == 0;
 }
 
@@ -218,7 +218,7 @@ static inline float load_factor(Hash_table hash_table) {
 
 	@return 1 if the new entry couldn't be created, 0 otherwise.
 */
-int insert_ht(Hash_table hash_table, uint8_t *key, uint32_t value) {
+int insert_ht(Hash_table hash_table, const uint8_t *key, uint32_t value) {
 	HT_entry *new_entry = (HT_entry *) malloc(sizeof(HT_entry));
 	if (new_entry == NULL)
 		return 1;
@@ -253,7 +253,7 @@ int insert_ht(Hash_table hash_table, uint8_t *key, uint32_t value) {
 
 	@return 1 if no entry with the provided key exists, 0 otherwise.
 */
-int remove_by_key(Hash_table hash_table, uint8_t *key, Deletion_mode mode) {
+int remove_by_key(Hash_table hash_table, const uint8_t *key, Deletion_mode mode) {
 	uint32_t hash = hash_function(key);
 	uint32_t index = get_index(hash, hash_table->capacity);
 	HT_entry *previous, *curr = hash_table->table[index];
@@ -294,7 +294,7 @@ int remove_by_key(Hash_table hash_table, uint8_t *key, Deletion_mode mode) {
 
 	@return a pointer to the entry, NULL if no entry with the key exists.
 */
-static HT_entry *get_entry(Hash_table hash_table, uint8_t *key) {
+static HT_entry *get_entry(Hash_table hash_table, const uint8_t *key) {
 	uint32_t hash = hash_function(key);
 	uint32_t index = get_index(hash, hash_table->capacity);
 	HT_entry *entry = hash_table->table[index];
@@ -313,7 +313,7 @@ static HT_entry *get_entry(Hash_table hash_table, uint8_t *key) {
 	@param hash_table the hash table.
 	@param key the key.
 */
-uint32_t get_value(Hash_table hash_table, uint8_t *key) {
+uint32_t get_value(Hash_table hash_table, const uint8_t *key) {
 	HT_entry *entry = get_entry(hash_table, key);
 	if (entry == NULL)
 		return 0;
@@ -330,7 +330,7 @@ uint32_t get_value(Hash_table hash_table, uint8_t *key) {
 
 	@return 1 if the key exists, 0 if it doesn't.
 */
-int exists_key(Hash_table hash_table, uint8_t *key) {
+int exists_key(Hash_table hash_table, const uint8_t *key) {
 	return get_entry(hash_table, key) != NULL;
 }
 
@@ -344,7 +344,7 @@ int exists_key(Hash_table hash_table, uint8_t *key) {
 
 	@return 0 if the key exists, 1 if it doesn't.
 */
-int change_entry(Hash_table hash_table, uint8_t *key, uint32_t new_value) {
+int change_entry(Hash_table hash_table, const uint8_t *key, uint32_t new_value) {
 	HT_entry *entry = get_entry(hash_table, key);
 	if (entry == NULL)
 		return 1;
