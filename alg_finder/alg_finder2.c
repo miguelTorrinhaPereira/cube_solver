@@ -1,5 +1,6 @@
 //TODO: try to join big_ht in to the little_ht array, maybe it doesn't hurt performance
 //TODO: devide main into multiple functions
+//TODO: optimize to only use the true state size, but the hash still uses the full state size USED_STATE_SIZE
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,6 +21,7 @@
 #define GODS_NUMBER 20
 #define ALG_BUFF_SIZE (2 * GODS_NUMBER + 1)
 #define ENCODING_BASE (ROTATIONS_COUNT + 1)
+#define ORANGE_CENTER_LABLE 4
 
 
 typedef struct {
@@ -67,7 +69,7 @@ void get_alg_from_state_encoding(uint64_t initial_state_encoding, uint32_t targe
 		initial_depth++;
 	}
 	uint32_t target_depth = 0;
-	temp_num = target_depth;
+	temp_num = target_state_encoding;
 	while(temp_num > 0) {
 		temp_num /= ENCODING_BASE;
 		target_depth++;
@@ -75,7 +77,7 @@ void get_alg_from_state_encoding(uint64_t initial_state_encoding, uint32_t targe
 	uint32_t alg_size = initial_depth + target_depth;
 
 	// decode state encodings to moves
-	uint32_t buff_idx = initial_depth - 1;
+	int32_t buff_idx = initial_depth - 1;  // needs to be -1, if initial_depth = 0
 	while(buff_idx >= 0) {
 		// -1 because the rotation is encoding with 1 to ROTATIONS_COUNT, not 0 to ROTATIONS_COUNT - 1
 		uint32_t rotation = initial_state_encoding % ENCODING_BASE - 1;
@@ -103,7 +105,7 @@ void get_alg_from_state_encoding(uint64_t initial_state_encoding, uint32_t targe
 }
 
 
-bool solve_case_check_hts(uint8_t initial_state[STATE_SIZE], uint32_t *target_state_encoding) {
+bool solve_case_check_hts(const uint8_t initial_state[STATE_SIZE], uint32_t *target_state_encoding) {
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++) {
 		if(exists_key(little_state_hts[i], initial_state)) {
 			*target_state_encoding = get_value(little_state_hts[i], initial_state);
@@ -120,7 +122,10 @@ bool solve_case_check_hts(uint8_t initial_state[STATE_SIZE], uint32_t *target_st
 }
 
 
-bool solve_case_search(uint8_t initial_state[STATE_SIZE], uint32_t max_initial_depth, uint64_t *initial_state_encoding, uint32_t *target_state_encoding) {
+bool solve_case_search(const uint8_t initial_state[STATE_SIZE], uint32_t max_initial_depth, uint64_t *initial_state_encoding, uint32_t *target_state_encoding) {
+	if(max_initial_depth == 0)  // edge case
+		return false;
+
 	uint8_t states[STATE_SIZE * (max_initial_depth + 1)];
 	uint8_t depth_rotation[max_initial_depth] = {};
 	uint32_t curr_depth = 0;
@@ -129,8 +134,11 @@ bool solve_case_search(uint8_t initial_state[STATE_SIZE], uint32_t max_initial_d
 	memcpy(&states[0], initial_state, STATE_SIZE);
 	depth_rotation[0] = 0;
 
-	while(curr_depth >= 0) {
+	while(true) {
 		if(depth_rotation[curr_depth] == ROTATIONS_COUNT) {
+			if(curr_depth == 0)
+				break;
+
 			curr_depth--;
 			depth_rotation[curr_depth]++;
 			state_p -= STATE_SIZE;
@@ -148,18 +156,20 @@ bool solve_case_search(uint8_t initial_state[STATE_SIZE], uint32_t max_initial_d
 			while(state_p < end)
 				*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
-			curr_depth++;
-			depth_rotation[curr_depth] = 0;
 			if(exists_key(big_state_ht, end)) {
-				*initial_state = calc_state_encoding(depth_rotation, curr_depth);
+				*initial_state_encoding = calc_state_encoding(depth_rotation, curr_depth + 1);
 				*target_state_encoding = get_value(big_state_ht, end);
 				return true;
 			}
+
+			depth_rotation[curr_depth + 1] = 0;
+			curr_depth++;
 		}
 		else {
-			while(depth_rotation[max_initial_depth - 1] < ROTATIONS_COUNT) {
-				if(depth_rotation[max_initial_depth - 2] / 3 == depth_rotation[max_initial_depth - 1] / 3) {
-					depth_rotation[max_initial_depth - 1] = 3 * (depth_rotation[max_initial_depth - 2] / 3 + 1);
+			//TODO: maybe they don't need to be seperate loops
+			while(depth_rotation[curr_depth] < ROTATIONS_COUNT) {
+				if(curr_depth > 0 && depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
+					depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
 					continue;
 				}
 
@@ -167,12 +177,12 @@ bool solve_case_search(uint8_t initial_state[STATE_SIZE], uint32_t max_initial_d
 					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
 				if(exists_key(big_state_ht, end)) {
-					*initial_state = calc_state_encoding(depth_rotation, curr_depth);
+					*initial_state_encoding = calc_state_encoding(depth_rotation, curr_depth + 1);
 					*target_state_encoding = get_value(big_state_ht, end);
 					return true;
 				}
 
-				depth_rotation[max_initial_depth - 1]++;
+				depth_rotation[curr_depth]++;
 
 				state_p -= STATE_SIZE;
 				next_state_p = end;
@@ -194,10 +204,13 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 	depth_rotation[0] = shallow_state->info;
 
 	// the value will always fit in 32 bits if the maximum search distance is 7
-	insert_ht(little_state_hts[1], &states[STATE_SIZE], (uint32_t)calc_state_encoding(depth_rotation, curr_depth));
+	insert_ht(little_state_hts[1], &states[STATE_SIZE], (uint32_t)calc_state_encoding(depth_rotation, 1));
 
-	while(curr_depth > 0) {
+	while(true) {
 		if(depth_rotation[curr_depth] == ROTATIONS_COUNT) {
+			if(curr_depth == 1)  // it start from a shallow state
+				break;
+
 			curr_depth--;
 			depth_rotation[curr_depth]++;
 			state_p -= STATE_SIZE;
@@ -207,6 +220,7 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 		uint8_t *end = state_p + STATE_SIZE;
 		uint8_t *next_state_p = end;
 		if(curr_depth < MAX_TARGET_DEPTH - 1) {
+			// doesn't need to check if curr_depth > 0, it is for sure
 			if(depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
 				depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
 				continue;
@@ -215,23 +229,24 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 			while(state_p < end)
 				*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
+			insert_ht(little_state_hts[curr_depth + 1], state_p, (uint32_t)calc_state_encoding(depth_rotation, curr_depth + 1));
+
+			depth_rotation[curr_depth + 1] = 0;
 			curr_depth++;
-			depth_rotation[curr_depth] = 0;
-			insert_ht(little_state_hts[curr_depth], state_p, (uint32_t)calc_state_encoding(depth_rotation, curr_depth));
 		}
 		else {
-			next_state_p = end = state_p + STATE_SIZE;
-			while(depth_rotation[MAX_TARGET_DEPTH - 1] < ROTATIONS_COUNT) {
-				if(depth_rotation[MAX_TARGET_DEPTH - 2] / 3 == depth_rotation[MAX_TARGET_DEPTH - 1] / 3) {
-					depth_rotation[MAX_TARGET_DEPTH - 1] = 3 * (depth_rotation[MAX_TARGET_DEPTH - 2] / 3 + 1);
+			while(depth_rotation[curr_depth] < ROTATIONS_COUNT) {
+				if(depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
+					depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
 					continue;
 				}
 
 				while(state_p < end)
 					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
-				insert_ht(big_state_ht, end, (uint32_t)calc_state_encoding(depth_rotation, MAX_TARGET_DEPTH));
-				depth_rotation[MAX_TARGET_DEPTH - 1]++;
+				insert_ht(big_state_ht, end, (uint32_t)calc_state_encoding(depth_rotation, curr_depth + 1));
+
+				depth_rotation[curr_depth]++;
 
 				state_p -= STATE_SIZE;
 				next_state_p = end;
@@ -253,9 +268,7 @@ void *thread_func(void *tid_p) {
 	// construct state hash tables
 	unsolved_case_t *shallow_state;
 	while((shallow_state = pop(shallow_target_states_queue)) != NULL) {
-		printf("thread %d pickup shallow_state %d\n", tid, shallow_state->info);
 		build_hash_tables(shallow_state);
-		printf("thread %d did shallow_state %d\n", tid, shallow_state->info);
 		free(shallow_state);
 	}
 	pthread_barrier_wait(&ht_construction_barrier);
@@ -278,50 +291,48 @@ void *thread_func(void *tid_p) {
 		if(current_case == NULL)
 			break;
 
+		uint32_t max_initial_depth = current_case->info;  // a.k.a search depth
+
 		// try to solve case
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-		if(solve_case_check_hts(current_case->state, &target_state_encoding) ||
-		   solve_case_search(current_case->state, current_case->info, &initial_state_encoding, &target_state_encoding))
-			found_solution = true;
+		if(max_initial_depth == 0)
+			found_solution = solve_case_check_hts(current_case->state, &target_state_encoding);
+		else
+			found_solution = solve_case_search(current_case->state, max_initial_depth, &initial_state_encoding, &target_state_encoding);
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
 		// store results
 		if(found_solution) {
 			solved_case_t *solved_case = malloc(sizeof(solved_case_t));
 			memcpy(solved_case->state, current_case->state, STATE_SIZE);
+			free(current_case);
 			get_alg_from_state_encoding(initial_state_encoding, target_state_encoding, solved_case->alg);
 
 			push(solved_cases_queue, solved_case);
 
-			free(current_case);
 			sem_post(&solved_cases_sem);
 		}
 		else {  // try latter with more search depth
-			current_case->info++;
+			current_case->info+= 1;
 			push(unsolved_cases_queue, current_case);
 		}
 	}
 
 	pthread_cleanup_pop(0);
-	printf("thread %d finished\n", tid);
 	return NULL;
 }
 
 void write_solved_case(solved_case_t *solved_case) {
 	for(int i = 0; i < STATE_SIZE; i++)
-		fprintf(stdout, "%d ", solved_case->state[i]);
-	fprintf(stdout, ": %s\n", solved_case->alg);
-
-	free(solved_case);
+		fprintf(stdout, "%u ", solved_case->state[i]);
+	fprintf(stdout, ": \"%s\"\n", solved_case->alg);
 }
 
 
 void write_unsolved_case(unsolved_case_t *unsolved_case) {
 	for(int i = 0; i < STATE_SIZE; i++)
-		fprintf(stdout, "%d ", unsolved_case->state[i]);
-	fprintf(stdout, ": %d\n", unsolved_case->info);
-
-	free(unsolved_case);
+		fprintf(stderr, "%u ", unsolved_case->state[i]);
+	fprintf(stderr, ": %u\n", unsolved_case->info);
 }
 
 
@@ -333,12 +344,16 @@ void sig_int_handler(int signum) {
 		pthread_join(pthread_tids[i], NULL);
 
 	solved_case_t *solved_case;
-	while((solved_case = pop(solved_cases_queue)) != NULL)
+	while((solved_case = pop(solved_cases_queue)) != NULL) {
 		write_solved_case(solved_case);
+		free(solved_case);
+	}
 
 	unsolved_case_t *unsolved_case;
-	while((unsolved_case = pop(unsolved_cases_queue)) != NULL)
+	while((unsolved_case = pop(unsolved_cases_queue)) != NULL) {
 		write_unsolved_case(unsolved_case);
+		free(unsolved_case);
+	}
 
 	exit(1);
 }
@@ -361,29 +376,32 @@ int main(int argc, char *argv[]) {
 	uint32_t new_num; // used to receive the input since it will be stored as uint8_t
 	FILE *input_file = (argc == 2) ? fopen(argv[1], "r") : stdin;
 
-	int scanf_status __attribute__((unused));
+	int scanf_status __attribute__((unused));  // used to supresss the compiler warnings about unused values of scanf
 	uint32_t input_state_size;
-	scanf_status = scanf("%u", &input_state_size);
+	scanf_status = fscanf(input_file, "%u", &input_state_size);
 
 	// read target state
+	memset(target_state, ORANGE_CENTER_LABLE, STATE_SIZE);
 	for(int i = 0; i < input_state_size; i++) {
-		scanf_status = scanf("%u", &new_num);
+		scanf_status = fscanf(input_file, "%u", &new_num);
 		target_state[i] = new_num;
 	}
 
 	// read unsolved cases
 	while(true) {
-		if(scanf("%u", &new_num) == EOF)
+		if(fscanf(input_file, "%u", &new_num) == EOF)
 			break;
 
 		unsolved_case_t *new_unsolved_case = malloc(sizeof(unsolved_case_t));
-		scanf_status = scanf("| %u", &new_unsolved_case->info);
-		new_unsolved_case->state[0] = new_num;
 
+		memset(new_unsolved_case->state, ORANGE_CENTER_LABLE, STATE_SIZE);
+		new_unsolved_case->state[0] = new_num;
 		for(int i = 1; i < input_state_size; i++) {
-			scanf_status = scanf("%u", &new_num);
+			scanf_status = fscanf(input_file, "%u", &new_num);
 			new_unsolved_case->state[i] = new_num;
 		}
+
+		new_unsolved_case->info = 0;  // search depth 0, wich means it will just check the hash tables
 
 		push(unsolved_cases_queue, new_unsolved_case);
 		unsolved_cases_count++;
@@ -434,7 +452,9 @@ int main(int argc, char *argv[]) {
 		pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
 		solved_case_t *solved_case = pop(solved_cases_queue);
 		write_solved_case(solved_case);
-		unsolved_cases_queue--;
+		free(solved_case);
+
+		unsolved_cases_count--;
 		pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
 	}
 
@@ -444,8 +464,8 @@ int main(int argc, char *argv[]) {
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
 
-	// debug
-	// for(int ht_idx = 0; ht_idx < MAX_TARGET_DEPTH; ht_idx++)
-	// 	printf("ht %d size %d capacity %d\n", ht_idx, get_hash_table_count(little_state_hts[ht_idx]), get_hash_table_capacity(little_state_hts[ht_idx]));
-	// printf("ht %d size %d capacity %u\n", MAX_TARGET_DEPTH, get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
+	//debug
+	// for(int i = 0; i<MAX_TARGET_DEPTH; i++)
+	// 	printf("size = %d, %d\n", get_hash_table_count(little_state_hts[i]), get_hash_table_capacity(little_state_hts[i]));
+	// printf("size = %d\n", get_hash_table_count(big_state_ht));
 }
