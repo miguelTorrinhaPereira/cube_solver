@@ -257,7 +257,7 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 
 
 void giveup_case(void *arg) {
-	unsolved_case_t *current_case = arg;
+	unsolved_case_t *current_case = *(unsolved_case_t **)arg;
 	push(unsolved_cases_queue, current_case);
 }
 
