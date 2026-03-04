@@ -1,15 +1,15 @@
 all:
-	gcc -O3 alg_finder2.c hash_table.c queue.c -lm
+	gcc -O3 alg_finder2.c hash_table.c queue.c -lm -o alg_finder2
 
 run: all
-	./a.out
+	./alg_finder2 test.in
 
 time: all
-	time ./a.out
+	time ./alg_finder2 test.in
 
 time2:
-	gcc -O3 alg_finder.c hash_table.c  -lm
-	time ./a.out
+	gcc -O3 alg_finder.c hash_table.c  -lm -o alg_finder1
+	time ./alg_finder1
 
 clean:
-	rm a.out
+	rm alg_finder*
