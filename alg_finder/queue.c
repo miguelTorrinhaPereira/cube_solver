@@ -49,11 +49,13 @@ int push(Queue queue, void *value) {
 
 
 void *pop(Queue queue) {
-	if(is_queue_empty(queue))
+	pthread_mutex_lock(&queue->lock);
+	if(is_queue_empty(queue)) {
+		pthread_mutex_unlock(&queue->lock);
 		return NULL;
+	}
 
 	Queue_entry *old_head;
-	pthread_mutex_lock(&queue->lock);
 	old_head = queue->head;
 	queue->head = queue->head->next;
 	pthread_mutex_unlock(&queue->lock);
