@@ -309,8 +309,8 @@ void *thread_func(void *tid_p) {
 
 void write_solved_case(solved_case_t *solved_case) {
 	for(int i = 0; i < STATE_SIZE; i++)
-		sprintf(stdout, "%d ", solved_case->state[i]);
-	sprintf(stdout, ": %s\n", solved_case->alg);
+		fprintf(stdout, "%d ", solved_case->state[i]);
+	fprintf(stdout, ": %s\n", solved_case->alg);
 
 	free(solved_case);
 }
@@ -318,8 +318,8 @@ void write_solved_case(solved_case_t *solved_case) {
 
 void write_unsolved_case(unsolved_case_t *unsolved_case) {
 	for(int i = 0; i < STATE_SIZE; i++)
-		sprintf(stdout, "%d ", unsolved_case->state[i]);
-	sprintf(stdout, ": %d\n", unsolved_case->info);
+		fprintf(stdout, "%d ", unsolved_case->state[i]);
+	fprintf(stdout, ": %d\n", unsolved_case->info);
 
 	free(unsolved_case);
 }
@@ -361,27 +361,27 @@ int main(int argc, char *argv[]) {
 	uint32_t new_num; // used to receive the input since it will be stored as uint8_t
 	FILE *input_file = (argc == 2) ? fopen(argv[1], "r") : stdin;
 
+	int scanf_status __attribute__((unused));
 	uint32_t input_state_size;
-	scanf("%u", &input_state_size);
+	scanf_status = scanf("%u", &input_state_size);
 
 	// read target state
 	for(int i = 0; i < input_state_size; i++) {
-		scanf("%u", &new_num);
+		scanf_status = scanf("%u", &new_num);
 		target_state[i] = new_num;
 	}
 
-	//TODO: improve, read base initial depth and read variable size states, (ignore the rest), or read provided state size
 	// read unsolved cases
 	while(true) {
 		if(scanf("%u", &new_num) == EOF)
 			break;
 
 		unsolved_case_t *new_unsolved_case = malloc(sizeof(unsolved_case_t));
-		scanf("| %u", &new_unsolved_case->info);
+		scanf_status = scanf("| %u", &new_unsolved_case->info);
 		new_unsolved_case->state[0] = new_num;
 
 		for(int i = 1; i < input_state_size; i++) {
-			scanf("%u", &new_num);
+			scanf_status = scanf("%u", &new_num);
 			new_unsolved_case->state[i] = new_num;
 		}
 
