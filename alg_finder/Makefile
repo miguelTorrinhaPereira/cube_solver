@@ -14,8 +14,7 @@ time2:
 profile:
 	gcc -O3 -pg alg_finder2.c hash_table.c queue.c -lm -o alg_finder2
 	./alg_finder2 test.in 
-	gprof | batcat
-
+	gprof alg_finder2 | batcat
 
 clean:
 	rm alg_finder*
