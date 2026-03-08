@@ -294,7 +294,7 @@ int remove_by_key(Hash_table hash_table, const uint8_t *key, Deletion_mode mode)
 
 	@return a pointer to the entry, NULL if no entry with the key exists.
 */
-static HT_entry *get_entry(Hash_table hash_table, const uint8_t *key) {
+HT_entry *get_entry(Hash_table hash_table, const uint8_t *key) {
 	uint32_t hash = hash_function(key);
 	uint32_t index = get_index(hash, hash_table->capacity);
 	HT_entry *entry = hash_table->table[index];
@@ -319,19 +319,6 @@ uint32_t get_value(Hash_table hash_table, const uint8_t *key) {
 		return 0;
 
 	return entry->value;
-}
-
-
-/**
-	@brief Determines if a given key exists in a hash table.
-
-	@param hash_table the hash table.
-	@param key the key.
-
-	@return 1 if the key exists, 0 if it doesn't.
-*/
-int exists_key(Hash_table hash_table, const uint8_t *key) {
-	return get_entry(hash_table, key) != NULL;
 }
 
 
