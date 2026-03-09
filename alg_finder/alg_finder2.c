@@ -1,6 +1,9 @@
 //TODO: try to join big_ht in to the little_ht array, maybe it doesn't hurt performance
-//TODO: devide main into multiple functions
-//TODO: optimize to only use the true state size, but the hash still uses the full state size USED_STATE_SIZE
+//TODO: optimize to only use the true state size, but the hash still uses the full state size USED_STATE_SIZE, could help in f2l
+//TODO: SIMD the shitt out of the search function last level step, will need get_entry2 that already receives the hash, previous state and move
+//TODO: try linear probing hash table, should be faster for reads, UINT32_MAX in value for unused spaces, mutexes for sync, may be slower to construct, but it doesn't really matter
+//TODO: huge pages, 1GB
+//TODO: test weakening the hash function
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,8 +19,9 @@
 #include "hash_table.h"
 #include "queue.h"
 
-// max is 7, the hash tables will not work with more, the valeu is only 32 bits
-#define MAX_TARGET_DEPTH 7
+// max is 7, the hash tables will not work with more, the value is only 32 bits
+// but it would be possible to compact the encoding to go up to level 8
+#define MAX_TARGET_DEPTH 5
 #define GODS_NUMBER 20
 #define ALG_BUFF_SIZE (2 * GODS_NUMBER + 1)
 #define ENCODING_BASE (ROTATIONS_COUNT + 1)
@@ -166,7 +170,6 @@ bool solve_case_search(const uint8_t initial_state[STATE_SIZE], uint32_t max_ini
 			curr_depth++;
 		}
 		else {
-			//TODO: maybe they don't need to be seperate loops
 			while(depth_rotation[curr_depth] < ROTATIONS_COUNT) {
 				if(curr_depth > 0 && depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
 					depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
@@ -401,7 +404,10 @@ int main(int argc, char *argv[]) {
 			new_unsolved_case->state[i] = new_num;
 		}
 
-		new_unsolved_case->info = 0;  // search depth 0, wich means it will just check the hash tables
+		if(fscanf(input_file, " : %u", &new_num))
+			new_unsolved_case->info = new_num;
+		else
+			new_unsolved_case->info = 0;  // search depth 0, wich means it will just check the hash tables
 
 		push(unsolved_cases_queue, new_unsolved_case);
 		unsolved_cases_count++;
@@ -409,7 +415,7 @@ int main(int argc, char *argv[]) {
 
 	// create hash tables
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++)
-		little_state_hts[i] = create_hash_table(pow(16, i) + 10);  // in little hash talble level 1, there are 18 entries, 18 > 16
+		little_state_hts[i] = create_hash_table(pow(16, i) + 1);  // in little hash talble level 1, there are 18 entries, 18 > 16
 	big_state_ht = create_hash_table(pow(17, MAX_TARGET_DEPTH));
 	insert_ht(little_state_hts[0], target_state, 0);
 
@@ -436,7 +442,7 @@ int main(int argc, char *argv[]) {
 	sigaction(SIGINT, &sig_act, NULL);
 
 
-	thread_count = get_nprocs();
+	thread_count = get_nprocs() / 2;  // hypperthrading doesn't help in this kind of load
 	pthread_barrier_init(&ht_construction_barrier, NULL, thread_count);
 
 	// create threads
@@ -464,8 +470,14 @@ int main(int argc, char *argv[]) {
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
 
-	//debug
+	// debug
+	// // for testing hash table distribution
+	// int used_slots = 0;
+	// for(int i = 0; i < get_hash_table_capacity(big_state_ht); i++)
+	// 	used_slots += !!(big_state_ht->table[i]);
+	// printf("%f\n", get_hash_table_count(big_state_ht)/(double)used_slots);
+
 	// for(int i = 0; i<MAX_TARGET_DEPTH; i++)
-	// 	printf("size = %d, %d\n", get_hash_table_count(little_state_hts[i]), get_hash_table_capacity(little_state_hts[i]));
-	// printf("size = %d\n", get_hash_table_count(big_state_ht));
+	//  	printf("size = %d, %d\n", get_hash_table_count(little_state_hts[i]), get_hash_table_capacity(little_state_hts[i]));
+	// printf("size = %d, %d\n", get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
 }
