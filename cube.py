@@ -10,47 +10,51 @@ letter_to_face_num = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
 #   5
 #
 # the adjancent faces are listed counter clockwise
-adj_faces_list = [
-    [1, 4, 3, 5],
-    [0, 5, 2, 4],
-    [1, 5, 3, 4],
-    [2, 5, 0, 4],
-    [0, 1, 2, 3],
-    [3, 2, 1, 0]
-]
-adj_faces_sections_list = [
-    [3, 3, 1, 3],
-    [1, 0, 3, 2],
-    [1, 1, 3, 1],
-    [1, 2, 3, 0],
-    [0, 0, 0, 0],
-    [2, 2, 2, 2]
-]
-# é uma list[a de 6 listas que representam cada face do cube
+adj_faces_list = (
+    (1, 4, 3, 5),
+    (0, 5, 2, 4),
+    (1, 5, 3, 4),
+    (2, 5, 0, 4),
+    (0, 1, 2, 3),
+    (3, 2, 1, 0)
+)
+adj_faces_sections_list = (
+    (3, 3, 1, 3),
+    (1, 0, 3, 2),
+    (1, 1, 3, 1),
+    (1, 2, 3, 0),
+    (0, 0, 0, 0),
+    (2, 2, 2, 2)
+)
+# é uma list(a de 6 listas que representam cada face do cube
 #   0 1 2
 #   3 4 5
 #   6 7 8
-section_beginning = [0, 2, 8, 6]
-section_step = [1, 3, -1, -3]
+# utilizado para  rodar o cubo
+section_beginning = (0, 2, 8, 6)
+section_step = (1, 3, -1, -3)
 # listed counter clockwise
-middle_cells = [1, 3, 7, 5]
-corner_cells = [0, 6, 8, 2]
-color_to_text_color = [
+middle_cells = (1, 3, 7, 5)
+corner_cells = (0, 6, 8, 2)
+# para fazer o display do cubo
+color_to_text_color = (
     (255, 89, 0),
     (0, 69, 173),
     (185, 0, 0),
     (0, 155, 72),
     (255, 213, 0),
     (255, 255, 255),
-]
+)
 
 
 class Cube:
-    default_colors = [[i] * 9 for i in range(6)]
-    ORANGE, BLUE, RED, GREEN, YELLOW, WHITE = list(range(6))
+    FACE_COUNT = 6
+    CELLS_PER_FACE = 9
+    DEFAULT_COLORS = [[i] * 9 for i in range(FACE_COUNT)]
+    ORANGE, BLUE, RED, GREEN, YELLOW, WHITE = tuple(range(FACE_COUNT))
 
 
-    def __init__(self, colors: list[list[int]] = default_colors) -> None:
+    def __init__(self, colors: list[list[int]] = DEFAULT_COLORS) -> None:
         self.colors = [face.copy() for face in colors]
 
 
@@ -60,6 +64,9 @@ class Cube:
 
     def get_cell_color(self, face_num: int, cell: int) -> int:
         return self.colors[face_num][cell]
+
+    def get_sticker_color(self, sticker: int) -> int:
+        return self.colors[sticker // Cube.CELLS_PER_FACE][sticker % Cube.CELLS_PER_FACE]
 
 
     def rotate(self, rotation: str) -> None:
@@ -77,7 +84,7 @@ class Cube:
             self.rotate_face(face_num, True)
 
 
-    def rotate_face_cells(self, face_num: int, cells: list[int]) -> None:
+    def rotate_face_cells(self, face_num: int, cells: tuple[int, ...]) -> None:
         face = self.colors[face_num]
 
         first_cell_color = face[cells[0]]
