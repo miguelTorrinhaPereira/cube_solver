@@ -4,6 +4,7 @@
 //TODO: try linear probing hash table, should be faster for reads, UINT32_MAX in value for unused spaces, mutexes for sync, may be slower to construct, but it doesn't really matter
 //TODO: huge pages, 1GB
 //TODO: test weakening the hash function
+//TODO: make the formula for ht size better, 18 * 13.35 ^ (d - 1) * oversupply, maybe calculate the max depth based on available memory dynamicaly (maybe not)
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,7 +22,7 @@
 
 // max is 7, the hash tables will not work with more, the value is only 32 bits
 // but it would be possible to compact the encoding to go up to level 8
-#define MAX_TARGET_DEPTH 5
+#define MAX_TARGET_DEPTH 7
 #define GODS_NUMBER 20
 #define ALG_BUFF_SIZE (2 * GODS_NUMBER + 1)
 #define ENCODING_BASE (ROTATIONS_COUNT + 1)
@@ -404,7 +405,7 @@ int main(int argc, char *argv[]) {
 			new_unsolved_case->state[i] = new_num;
 		}
 
-		if(fscanf(input_file, " : %u", &new_num))
+		if(fscanf(input_file, " : %u", &new_num) > 0)
 			new_unsolved_case->info = new_num;
 		else
 			new_unsolved_case->info = 0;  // search depth 0, wich means it will just check the hash tables
