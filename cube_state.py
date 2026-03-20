@@ -30,47 +30,22 @@ piece_colors = {
     (1, 2, 4): 19,
 }
 
-# the inverted possitions of a given middle by piece number
-middle_inverted_positions = {
-    1: (),
-    3: (),
-    4: (),
-    6: (),
+# the -1 if for the centers
+sticker_to_piece = (
+    12, 15, 17, 11, -1, 8, 5, 3, 0,  # L
+    17, 18, 19, 8, -1, 9, 0, 1, 2,  # F
+    19, 16, 14, 9, -1, 10, 2, 4, 7,  # R
+    14, 13, 12, 10, -1, 11, 7, 6, 5,  # B
+    12, 13, 14, 15, -1, 16, 17, 18, 19,  # U
+    0, 1, 2, 3, -1, 4, 5, 6, 7  # D
+)
 
-    8: (),
-    9: (),
-    10: (),
-    11: (),
-
-    13: (),
-    15: (),
-    16: (),
-    18: (),
-}
-# the 120 positions of a given corner by piece number
-corner_120_positions = {
-    0: (),
-    3: (),
-    5: (),
-    7: (),
-
-    12: (),
-    14: (),
-    17: (),
-    19: (),
-}
-# the 240 positions of a given corner by piece number
-corner_240_positions = {
-    0: (),
-    3: (),
-    5: (),
-    7: (),
-
-    12: (),
-    14: (),
-    17: (),
-    19: (),
-}
+# starting at the start sticker of the piece,
+# the number of counter clockwise rotations to get to the orientation sticker
+piece_orientation_sticker_number = (1, 0, 1, 0, 1, 2, 1, 1,    0, 0, 0, 1,   1, 0, 2, 1, 0, 2, 1, 2)
+middle_inverted_positions = (46, 48, 25, 34,   12, 21, 30, 3,  37, 1, 41, 10)
+corner_120_positions = (8, 17, 26, 35, 0, 9, 18, 27)
+corner_240_positions = (6, 15, 24, 33, 2, 11, 20, 29)
 
 
 def get_state(cube: Cube) -> tuple[int, ...]:
@@ -104,11 +79,65 @@ def mask_state(state: tuple[int, ...], mask: tuple[bool, ...]) -> tuple[int, ...
 
 
 def is_state_valid(state: tuple[int, ...]) -> bool:
+    def check_permutation_parity(state: tuple[int, ...]) -> bool:
+        # it is the position, but doesn't care about the orientation, it is more like
+        # in the place of which piece in the solved state is this piece currently
+        positions = [sticker_to_piece[sticker] for sticker in state]
 
-    # check piece permutation
-    # check middle orientation
-    # check corner orientatino
+        cycle_size_sum = 0
+        for start in positions:
+            if start == -1:  # it was already visited
+                continue
 
-    return True
+            curr = start
+            while positions[curr] != start:
+                next = positions[curr]
+                positions[curr] = -1
+                curr = next
+
+                cycle_size_sum += 1
+            positions[curr] = -1
+
+        return cycle_size_sum % 2 == 0
 
 
+    def check_middle_orientation_parity(state: tuple[int, ...]) -> bool:
+        total_inversions = 0
+        for piece_num in range(STATE_SIZE):
+            sticker = state[piece_num]
+            if (sticker % 9) % 2 != 1:  # it isn't a middle
+                continue
+
+            for _ in range(piece_orientation_sticker_number[piece_num]):
+                sticker = adj_sticker[sticker]
+
+            total_inversions += (sticker in middle_inverted_positions)
+
+        return total_inversions % 2 == 0
+
+
+    def check_corner_orientation_parity(state: tuple[int, ...]) -> bool:
+        total_rotations = 0
+        for piece_num in range(STATE_SIZE):
+            sticker = state[piece_num]
+            if (sticker % 9) % 2 != 0:  # it isn't a corner
+                continue
+
+            for _ in range(piece_orientation_sticker_number[piece_num]):
+                sticker = adj_sticker[sticker]
+
+            if sticker in corner_120_positions:
+                total_rotations += 1
+            elif sticker in corner_240_positions:
+                total_rotations += 2
+
+        return total_rotations % 3 == 0
+
+
+    # the state must be complete, no masking
+    if any(map(lambda x: x == -1, state)):
+        return False
+
+    return check_permutation_parity(state) and \
+        check_middle_orientation_parity(state) and \
+        check_corner_orientation_parity(state)

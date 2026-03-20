@@ -47,15 +47,19 @@ color_to_text_color = (
 )
 
 
+FACE_COUNT = 6
+CELLS_PER_FACE = 9
+DEFAULT_COLORS = [[i] * 9 for i in range(FACE_COUNT)]
+ORANGE, BLUE, RED, GREEN, YELLOW, WHITE = tuple(range(FACE_COUNT))
+
+
 class Cube:
-    FACE_COUNT = 6
-    CELLS_PER_FACE = 9
-    DEFAULT_COLORS = [[i] * 9 for i in range(FACE_COUNT)]
-    ORANGE, BLUE, RED, GREEN, YELLOW, WHITE = tuple(range(FACE_COUNT))
-
-
     def __init__(self, colors: list[list[int]] = DEFAULT_COLORS) -> None:
         self.colors = [face.copy() for face in colors]
+
+
+    def reset(self):
+        self.colors = [face.copy() for face in DEFAULT_COLORS]
 
 
     def get_face(self, face_num: int) -> list[int]:
@@ -66,7 +70,7 @@ class Cube:
         return self.colors[face_num][cell]
 
     def get_sticker_color(self, sticker: int) -> int:
-        return self.colors[sticker // Cube.CELLS_PER_FACE][sticker % Cube.CELLS_PER_FACE]
+        return self.colors[sticker // CELLS_PER_FACE][sticker % CELLS_PER_FACE]
 
 
     def rotate(self, rotation: str) -> None:
