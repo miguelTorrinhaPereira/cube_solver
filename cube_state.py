@@ -1,12 +1,12 @@
 from cube import Cube
 
 STATE_SIZE = 20
-# it is the solve piece order, but it could be any permutation
+# it is the solved cube stickers, but it could be any sticker from the piece
 pieces_start_sticker = (8, 16, 17, 7, 25, 6, 34, 26,   5, 14, 23, 3,   0, 28, 20, 1, 19, 2, 10, 11)
 # the adjacent sticker of a sticker by rotating counter clockwise
 adj_sticker = (36, 39, 9, 32, 4, 12, 35, 48, 45, 42, 43, 18, 5, 13, 21, 8, 46, 47, 44, 41, 27, 14, 22, 30, 17, 50, 53,
                38, 37, 0, 23, 31, 3, 26, 52, 51, 29, 28, 20, 1, 40, 19, 2, 10, 11, 15, 16, 24, 7, 49, 25, 6, 34, 33)
-
+# the colors of the pieces ordered
 piece_colors = {
     (0, 1, 5): 0,
     (1, 5): 1,
@@ -28,6 +28,48 @@ piece_colors = {
     (0, 1, 4): 17,
     (1, 4): 18,
     (1, 2, 4): 19,
+}
+
+# the inverted possitions of a given middle by piece number
+middle_inverted_positions = {
+    1: (),
+    3: (),
+    4: (),
+    6: (),
+
+    8: (),
+    9: (),
+    10: (),
+    11: (),
+
+    13: (),
+    15: (),
+    16: (),
+    18: (),
+}
+# the 120 positions of a given corner by piece number
+corner_120_positions = {
+    0: (),
+    3: (),
+    5: (),
+    7: (),
+
+    12: (),
+    14: (),
+    17: (),
+    19: (),
+}
+# the 240 positions of a given corner by piece number
+corner_240_positions = {
+    0: (),
+    3: (),
+    5: (),
+    7: (),
+
+    12: (),
+    14: (),
+    17: (),
+    19: (),
 }
 
 
@@ -59,3 +101,14 @@ def get_state(cube: Cube) -> tuple[int, ...]:
 
 def mask_state(state: tuple[int, ...], mask: tuple[bool, ...]) -> tuple[int, ...]:
     return tuple([state[i] if mask[i] else -1 for i in range(STATE_SIZE)])
+
+
+def is_state_valid(state: tuple[int, ...]) -> bool:
+
+    # check piece permutation
+    # check middle orientation
+    # check corner orientatino
+
+    return True
+
+

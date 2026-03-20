@@ -443,7 +443,8 @@ int main(int argc, char *argv[]) {
 	sigaction(SIGINT, &sig_act, NULL);
 
 
-	thread_count = get_nprocs() / 2;  // hypperthrading doesn't help in this kind of load
+	//TODO: check if it makes a diference, the pi doesn't have hyperthreading
+	thread_count = get_nprocs_conf() / 2;  // hypperthreading doesn't help in this kind of load
 	pthread_barrier_init(&ht_construction_barrier, NULL, thread_count);
 
 	// create threads

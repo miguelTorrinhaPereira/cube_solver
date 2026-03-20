@@ -1,24 +1,25 @@
 from cube import Cube
+from cube_state import get_state, mask_state
 from cross import solve_cross
-from f2l import solve_f2l
-from _1lll import solve_1lll
 
 
 def solve_cube(cube_colors: list[list[int]]) -> str:
     cube = Cube(cube_colors)
 
-    solution = solve_cross(cube)
-    # cube = solve_f2l(cube)
-    # cube = solve_1lll(cube)
+    # generate all color of the cube
+    # solve cross / Xcross with the alg_finder, all 6 * 5 in one go
+    # try every order for the f2l pairs
+    # look up 1LLL case
+    # try to remove moves that undo each other
 
+    solution = ""
     return solution
 
 
-# scramble= "F'UUD'F2BU'RR'R'LU2DL2D'F'FD'R'U'"
-# cube = Cube()
-# cube.perform_sequence(scramble)
-# print(cube)
-# print("----------------\n")
-#
-# solution = solve_cube(cube.colors)
-# print(solution)
+scramble = "R2UR2U'R2F2U'F2DR2D'"
+cube = Cube()
+cube.perform_sequence(scramble)
+print(cube)
+print("----------------\n")
+
+print(get_state(cube))
