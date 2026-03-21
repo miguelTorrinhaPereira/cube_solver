@@ -1,6 +1,6 @@
 from cube import Cube
-from data import rotations, ROTATIONS_NUM, ROTATIONS_PER_FACE, WHITE, \
-    turn_outcome, pos_adj, cell_to_middle_id
+from data import ROTATIONS, ROTATIONS_NUM, ROTATIONS_PER_FACE, WHITE, \
+    TURN_OUTCOME, POS_ADJ, CELL_TO_MIDDLE_ID
 
 # -------------------------------------------
 # FIXME: this may be used as a backup, refactor
@@ -30,8 +30,8 @@ def get_initial_state(cube: Cube) -> list[int]:
     for face_num in range(6):
         for cell in (1, 3, 5, 7):
             if cube.get_cell_color(face_num, cell) == WHITE:
-                middle_pos = 4 * face_num + cell_to_middle_id[cell]
-                adj_face_num, adj_cell = pos_adj[middle_pos]
+                middle_pos = 4 * face_num + CELL_TO_MIDDLE_ID[cell]
+                adj_face_num, adj_cell = POS_ADJ[middle_pos]
                 initial_state[cube.get_cell_color(adj_face_num, adj_cell)] = middle_pos
 
     return initial_state
@@ -53,7 +53,7 @@ def explorer_buff(buff: list[list[int]]) -> None:
                     continue
 
                 middle_pos = buff[i][middle]
-                buff[ROTATIONS_NUM * i + rotation + 1][middle] = turn_outcome[middle_pos][rotation]
+                buff[ROTATIONS_NUM * i + rotation + 1][middle] = TURN_OUTCOME[middle_pos][rotation]
 
 
 def contains_state(buff: list[list[int]], key: list[int]) -> bool:
@@ -125,12 +125,12 @@ def solve_cross(cube: Cube) -> str:
 
     solution = ""
     while initial_buff_idx > 0:
-        solution = rotations[(initial_buff_idx - 1) % ROTATIONS_NUM] + solution
+        solution = ROTATIONS[(initial_buff_idx - 1) % ROTATIONS_NUM] + solution
         initial_buff_idx = (initial_buff_idx - 1) // ROTATIONS_NUM
 
     while solved_buff_idx > 0:
         rotation = (solved_buff_idx - 1) % ROTATIONS_NUM
-        solution = solution + rotations[rotation - 2 * (rotation % 3) + 2]
+        solution = solution + ROTATIONS[rotation - 2 * (rotation % 3) + 2]
         solved_buff_idx = (solved_buff_idx - 1) // ROTATIONS_NUM
 
 

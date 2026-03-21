@@ -1,19 +1,19 @@
 from cube import Cube
-from data import STATE_SIZE, pieces_start_sticker, adj_sticker, piece_colors, \
-    sticker_to_piece, piece_orientation_sticker_number, \
-    middle_inverted_positions, corner_120_positions, corner_240_positions
+from data import STATE_SIZE, PIECES_START_STICKER, ADJ_STICKER, PIECE_COLORS, \
+    STICKER_TO_PIECE_POSITION, PIECE_ORIENTATION_STICKER_NUMBER, \
+    MIDDLE_INVERTED_STICKERS, CORNER_120_STICKERS, CORNER_240_STICKERS
 
 
 def get_state(cube: Cube) -> tuple[int, ...]:
     state = [-1] * STATE_SIZE
 
-    for start_sticker in pieces_start_sticker:
+    for start_sticker in PIECES_START_STICKER:
         # follow adj_sticker and find all sticker of the piece
         stickers = [start_sticker]
-        new_sticker = adj_sticker[start_sticker]
+        new_sticker = ADJ_STICKER[start_sticker]
         while new_sticker != start_sticker:
             stickers.append(new_sticker)
-            new_sticker = adj_sticker[new_sticker]
+            new_sticker = ADJ_STICKER[new_sticker]
 
         # sort them based on their color
         stickers.sort(key=cube.get_sticker_color)
@@ -22,7 +22,7 @@ def get_state(cube: Cube) -> tuple[int, ...]:
         colors = tuple(map(cube.get_sticker_color, stickers))
 
         # get the piece number
-        piece_number = piece_colors[colors]
+        piece_number = PIECE_COLORS[colors]
 
         # store the piece position
         state[piece_number] = stickers[0]  # the position of a piece is the sticker of the lowest color of the piece
@@ -38,7 +38,7 @@ def is_state_valid(state: tuple[int, ...]) -> bool:
     def check_permutation_parity(state: tuple[int, ...]) -> bool:
         # it is the position, but doesn't care about the orientation, it is more like
         # in the place of which piece in the solved state is this piece currently
-        positions = [sticker_to_piece[sticker] for sticker in state]
+        positions = [STICKER_TO_PIECE_POSITION[sticker] for sticker in state]
 
         cycle_size_sum = 0
         for start in positions:
@@ -64,10 +64,10 @@ def is_state_valid(state: tuple[int, ...]) -> bool:
             if (sticker % 9) % 2 != 1:  # it isn't a middle
                 continue
 
-            for _ in range(piece_orientation_sticker_number[piece_num]):
-                sticker = adj_sticker[sticker]
+            for _ in range(PIECE_ORIENTATION_STICKER_NUMBER[piece_num]):
+                sticker = ADJ_STICKER[sticker]
 
-            total_inversions += (sticker in middle_inverted_positions)
+            total_inversions += (sticker in MIDDLE_INVERTED_STICKERS)
 
         return total_inversions % 2 == 0
 
@@ -79,12 +79,12 @@ def is_state_valid(state: tuple[int, ...]) -> bool:
             if (sticker % 9) % 2 != 0:  # it isn't a corner
                 continue
 
-            for _ in range(piece_orientation_sticker_number[piece_num]):
-                sticker = adj_sticker[sticker]
+            for _ in range(PIECE_ORIENTATION_STICKER_NUMBER[piece_num]):
+                sticker = ADJ_STICKER[sticker]
 
-            if sticker in corner_120_positions:
+            if sticker in CORNER_120_STICKERS:
                 total_rotations += 1
-            elif sticker in corner_240_positions:
+            elif sticker in CORNER_240_STICKERS:
                 total_rotations += 2
 
         return total_rotations % 3 == 0

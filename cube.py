@@ -1,7 +1,7 @@
 from data import CELLS_PER_FACE, DEFAULT_COLORS, \
-    letter_to_face_num, adj_faces_list, adj_faces_sections_list, \
-    section_beginning, section_step, middle_cells, corner_cells, \
-    color_to_text_color
+    LETTER_TO_FACE_NUM, ADJ_FACES_LIST, ADJ_FACES_SECTIONS_LIST, \
+    SECTION_BEGINNING, SECTION_STEP, MIDDLE_CELLS, CORNER_CELLS, \
+    COLOR_TO_TEXT_COLOR
 
 # FIXME: middle_cells and corner_cells are useless
 
@@ -27,7 +27,7 @@ class Cube:
 
 
     def rotate(self, rotation: str) -> None:
-        face_num = letter_to_face_num[rotation[0]]
+        face_num = LETTER_TO_FACE_NUM[rotation[0]]
         if len(rotation) == 1:
             self.rotate_adj_faces(face_num, True)
             self.rotate_face(face_num, True)
@@ -53,16 +53,16 @@ class Cube:
 
 
     def rotate_face(self, face_num: int, clockwise: bool) -> None:
-        cells = middle_cells if clockwise else middle_cells[::-1]
+        cells = MIDDLE_CELLS if clockwise else MIDDLE_CELLS[::-1]
         self.rotate_face_cells(face_num, cells)
-        cells = corner_cells if clockwise else corner_cells[::-1]
+        cells = CORNER_CELLS if clockwise else CORNER_CELLS[::-1]
         self.rotate_face_cells(face_num, cells)
         return
 
 
     def rotate_adj_faces(self, face_num: int, clockwise: bool) -> None:
-        adj_faces = adj_faces_list[face_num] if clockwise else adj_faces_list[face_num][::-1]
-        adj_faces_sections = adj_faces_sections_list[face_num] if clockwise else adj_faces_sections_list[face_num][::-1]
+        adj_faces = ADJ_FACES_LIST[face_num] if clockwise else ADJ_FACES_LIST[face_num][::-1]
+        adj_faces_sections = ADJ_FACES_SECTIONS_LIST[face_num] if clockwise else ADJ_FACES_SECTIONS_LIST[face_num][::-1]
 
         first_face_section = self.get_face_section(adj_faces[0], adj_faces_sections[0])
 
@@ -76,8 +76,8 @@ class Cube:
     def get_face_section(self, face_num: int, section_num: int) -> list[int]:
         face = self.colors[face_num]
         section = []
-        cell = section_beginning[section_num]
-        step = section_step[section_num]
+        cell = SECTION_BEGINNING[section_num]
+        step = SECTION_STEP[section_num]
         for i in range(3):
             section.append(face[cell])
             cell += step
@@ -87,8 +87,8 @@ class Cube:
 
     def set_face_section(self, face_num: int, section_num: int, new_values: list[int]) -> None:
         face = self.colors[face_num]
-        cell = section_beginning[section_num]
-        step = section_step[section_num]
+        cell = SECTION_BEGINNING[section_num]
+        step = SECTION_STEP[section_num]
         for i in range(3):
             face[cell] = new_values[i]
             cell += step
@@ -121,7 +121,7 @@ class Cube:
 
     def __str__(self) -> str:
         def cell_str(color: int):
-            text_color = color_to_text_color[color]
+            text_color = COLOR_TO_TEXT_COLOR[color]
             return f"[48;2;{text_color[0]};{text_color[1]};{text_color[2]}m [m"
 
         res = ""
