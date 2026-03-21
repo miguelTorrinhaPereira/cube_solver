@@ -1,56 +1,9 @@
-rotations = ("L", "L2", "L'", "F", "F2", "F'", "R", "R2", "R'", "B", "B2", "B'", "U", "U2", "U'", "D", "D2", "D'")
+from data import CELLS_PER_FACE, DEFAULT_COLORS, \
+    letter_to_face_num, adj_faces_list, adj_faces_sections_list, \
+    section_beginning, section_step, middle_cells, corner_cells, \
+    color_to_text_color
 
-letter_to_face_num = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
-#   U
-# L F R B
-#   D
-#
-#   4
-# 0 1 2 3
-#   5
-#
-# the adjancent faces are listed counter clockwise
-adj_faces_list = (
-    (1, 4, 3, 5),
-    (0, 5, 2, 4),
-    (1, 5, 3, 4),
-    (2, 5, 0, 4),
-    (0, 1, 2, 3),
-    (3, 2, 1, 0)
-)
-adj_faces_sections_list = (
-    (3, 3, 1, 3),
-    (1, 0, 3, 2),
-    (1, 1, 3, 1),
-    (1, 2, 3, 0),
-    (0, 0, 0, 0),
-    (2, 2, 2, 2)
-)
-# é uma list(a de 6 listas que representam cada face do cube
-#   0 1 2
-#   3 4 5
-#   6 7 8
-# utilizado para  rodar o cubo
-section_beginning = (0, 2, 8, 6)
-section_step = (1, 3, -1, -3)
-# listed counter clockwise
-middle_cells = (1, 3, 7, 5)
-corner_cells = (0, 6, 8, 2)
-# para fazer o display do cubo
-color_to_text_color = (
-    (255, 89, 0),
-    (0, 69, 173),
-    (185, 0, 0),
-    (0, 155, 72),
-    (255, 213, 0),
-    (255, 255, 255),
-)
-
-
-FACE_COUNT = 6
-CELLS_PER_FACE = 9
-DEFAULT_COLORS = [[i] * 9 for i in range(FACE_COUNT)]
-ORANGE, BLUE, RED, GREEN, YELLOW, WHITE = tuple(range(FACE_COUNT))
+# FIXME: middle_cells and corner_cells are useless
 
 
 class Cube:

@@ -1,8 +1,13 @@
-from cube import Cube, rotations
-from cross_turn_data import turn_outcome, pos_adj, cell_to_middle_id
+from cube import Cube
+from data import rotations, ROTATIONS_NUM, ROTATIONS_PER_FACE, WHITE, \
+    turn_outcome, pos_adj, cell_to_middle_id
 
-ROTATIONS_NUM = len(rotations)
-ROTATIONS_PER_FACE = ROTATIONS_NUM // 6
+# -------------------------------------------
+# FIXME: this may be used as a backup, refactor
+# to use the full turn outcome table
+# This is old code, probably will not be used
+# -------------------------------------------
+
 DEPTH = 4
 STATE_SIZE = 4
 SOLVED_STATE = [23, 20, 21, 22]
@@ -24,7 +29,7 @@ def get_initial_state(cube: Cube) -> list[int]:
 
     for face_num in range(6):
         for cell in (1, 3, 5, 7):
-            if cube.get_cell_color(face_num, cell) == Cube.WHITE:
+            if cube.get_cell_color(face_num, cell) == WHITE:
                 middle_pos = 4 * face_num + cell_to_middle_id[cell]
                 adj_face_num, adj_cell = pos_adj[middle_pos]
                 initial_state[cube.get_cell_color(adj_face_num, adj_cell)] = middle_pos
