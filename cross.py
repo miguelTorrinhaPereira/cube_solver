@@ -1,16 +1,16 @@
 from cube import Cube
-from data import ROTATIONS, ROTATIONS_NUM, ROTATIONS_PER_FACE, WHITE, \
-    TURN_OUTCOME, POS_ADJ, CELL_TO_MIDDLE_ID
+from data import CELLS_PER_FACE, ROTATIONS, ROTATIONS_NUM, ROTATIONS_PER_FACE, MIDDLE_CELLS, WHITE, \
+    TURN_OUTCOME, ADJ_STICKER
 
 # -------------------------------------------
-# FIXME: this may be used as a backup, refactor
-# to use the full turn outcome table
 # This is old code, probably will not be used
 # -------------------------------------------
 
 DEPTH = 4
 STATE_SIZE = 4
-SOLVED_STATE = [23, 20, 21, 22]
+# the position of the white sticker of the 4 white pieces in counter clock wise order
+# starting with the orange one
+SOLVED_STATE = [48, 46, 50, 52]
 
 
 def get_section_size(depth: int) -> int:
@@ -28,11 +28,11 @@ def get_initial_state(cube: Cube) -> list[int]:
     initial_state = [0] * STATE_SIZE
 
     for face_num in range(6):
-        for cell in (1, 3, 5, 7):
+        for cell in MIDDLE_CELLS:
             if cube.get_cell_color(face_num, cell) == WHITE:
-                middle_pos = 4 * face_num + CELL_TO_MIDDLE_ID[cell]
-                adj_face_num, adj_cell = POS_ADJ[middle_pos]
-                initial_state[cube.get_cell_color(adj_face_num, adj_cell)] = middle_pos
+                sticker = CELLS_PER_FACE * face_num + cell
+                color_sticker = ADJ_STICKER[sticker]
+                initial_state[cube.get_sticker_color(color_sticker)] = sticker
 
     return initial_state
 
@@ -47,13 +47,13 @@ def explorer_buff(buff: list[list[int]]) -> None:
         else:
             last_rotated_face = -1
 
-        for middle in range(STATE_SIZE):
+        for piece in range(STATE_SIZE):
             for rotation in range(ROTATIONS_NUM):
                 if rotation // ROTATIONS_PER_FACE == last_rotated_face:
                     continue
 
-                middle_pos = buff[i][middle]
-                buff[ROTATIONS_NUM * i + rotation + 1][middle] = TURN_OUTCOME[middle_pos][rotation]
+                pos = buff[i][piece]
+                buff[ROTATIONS_NUM * i + rotation + 1][piece] = TURN_OUTCOME[rotation][pos]
 
 
 def contains_state(buff: list[list[int]], key: list[int]) -> bool:
