@@ -1,4 +1,4 @@
-from data import CELLS_PER_FACE, DEFAULT_COLORS, \
+from data import FACE_COUNT, CELLS_PER_FACE, DEFAULT_COLORS, FACE_COUNT, \
     LETTER_TO_FACE_NUM, ADJ_FACES_LIST, ADJ_FACES_SECTIONS_LIST, \
     SECTION_BEGINNING, SECTION_STEP, MIDDLE_CELLS, CORNER_CELLS, \
     COLOR_TO_TEXT_COLOR
@@ -53,10 +53,10 @@ class Cube:
 
 
     def rotate_face(self, face_num: int, clockwise: bool) -> None:
-        cells = MIDDLE_CELLS if clockwise else MIDDLE_CELLS[::-1]
-        self.rotate_face_cells(face_num, cells)
-        cells = CORNER_CELLS if clockwise else CORNER_CELLS[::-1]
-        self.rotate_face_cells(face_num, cells)
+        middle_cells = MIDDLE_CELLS if clockwise else MIDDLE_CELLS[::-1]
+        self.rotate_face_cells(face_num, middle_cells)
+        corner_cells = CORNER_CELLS if clockwise else CORNER_CELLS[::-1]
+        self.rotate_face_cells(face_num, corner_cells)
         return
 
 
@@ -89,7 +89,7 @@ class Cube:
         face = self.colors[face_num]
         cell = SECTION_BEGINNING[section_num]
         step = SECTION_STEP[section_num]
-        for i in range(3):
+        for i in range(3):  # 3 is the number of cell in a section
             face[cell] = new_values[i]
             cell += step
 
@@ -106,10 +106,9 @@ class Cube:
 
 
     def is_solved(self) -> bool:
-        for face in self.colors:
-            base_color = face[4]
-            for i in range(9):
-                if face[i] != base_color:
+        for face_num in range(FACE_COUNT):
+            for cell in range(CELLS_PER_FACE):
+                if self.colors[face_num][cell] != DEFAULT_COLORS[face_num][cell]:
                     return False
 
         return True

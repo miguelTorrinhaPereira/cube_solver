@@ -44,7 +44,7 @@ ADJ_FACES_SECTIONS_LIST = (
 # utilizado para  rodar o cubo
 SECTION_BEGINNING = (0, 2, 8, 6)
 SECTION_STEP = (1, 3, -1, -3)
-# listed counter clockwise
+# listed counter clockwise, the order matters
 MIDDLE_CELLS = (1, 3, 7, 5)
 CORNER_CELLS = (0, 6, 8, 2)
 # para fazer o display do cubo
