@@ -1,6 +1,6 @@
 from cube import Cube
 from cube_state import get_state, mask_state
-from cross import solve_cross
+from cross_solver import solve_cross
 
 
 def solve_cube(cube_colors: list[list[int]]) -> str:
