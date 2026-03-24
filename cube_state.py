@@ -1,5 +1,5 @@
 from cube import Cube
-from data import STATE_SIZE, PIECES_START_STICKER, ADJ_STICKER, PIECE_COLORS, \
+from data import CELLS_PER_FACE, STATE_SIZE, PIECES_START_STICKER, ADJ_STICKER, PIECE_COLORS, \
     STICKER_TO_PIECE_POSITION, PIECE_ORIENTATION_STICKER_NUMBER, \
     MIDDLE_INVERTED_STICKERS, CORNER_120_STICKERS, CORNER_240_STICKERS
 
@@ -34,6 +34,19 @@ def mask_state(state: tuple[int, ...], mask: tuple[bool, ...]) -> tuple[int, ...
     return tuple([state[i] if mask[i] else -1 for i in range(STATE_SIZE)])
 
 
+def is_corner(sticker: int) -> bool:
+    cell = sticker % CELLS_PER_FACE
+    return cell != 4 and cell % 2 == 0
+
+
+def is_middle(sticker: int) -> bool:
+    return ((sticker % CELLS_PER_FACE) % 2) == 1
+
+
+def is_center(sticker: int) -> bool:
+    return sticker % CELLS_PER_FACE == 4
+
+
 def is_state_valid(state: tuple[int, ...]) -> bool:
     def check_permutation_parity(state: tuple[int, ...]) -> bool:
         # it is the position, but doesn't care about the orientation, it is more like
@@ -61,7 +74,7 @@ def is_state_valid(state: tuple[int, ...]) -> bool:
         total_inversions = 0
         for piece_num in range(STATE_SIZE):
             sticker = state[piece_num]
-            if (sticker % 9) % 2 != 1:  # it isn't a middle
+            if not is_middle(sticker):
                 continue
 
             for _ in range(PIECE_ORIENTATION_STICKER_NUMBER[piece_num]):
@@ -76,7 +89,7 @@ def is_state_valid(state: tuple[int, ...]) -> bool:
         total_rotations = 0
         for piece_num in range(STATE_SIZE):
             sticker = state[piece_num]
-            if (sticker % 9) % 2 != 0:  # it isn't a corner
+            if not is_corner(sticker):
                 continue
 
             for _ in range(PIECE_ORIENTATION_STICKER_NUMBER[piece_num]):
