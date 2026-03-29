@@ -328,14 +328,14 @@ void *thread_func(void *tid_p) {
 
 void write_solved_case(solved_case_t *solved_case) {
 	for(int i = 0; i < STATE_SIZE; i++)
-		fprintf(stdout, "%u ", solved_case->state[i]);
+		fprintf(stdout, "%d ", (solved_case->state[i] != ORANGE_CENTER_LABLE) ? solved_case->state[i] : -1);
 	fprintf(stdout, ": \"%s\"\n", solved_case->alg);
 }
 
 
 void write_unsolved_case(unsolved_case_t *unsolved_case) {
 	for(int i = 0; i < STATE_SIZE; i++)
-		fprintf(stderr, "%u ", unsolved_case->state[i]);
+		fprintf(stderr, "%d ", (unsolved_case->state[i] != ORANGE_CENTER_LABLE) ? unsolved_case->state[i] : -1);
 	fprintf(stderr, ": %u\n", unsolved_case->info);
 }
 
@@ -365,7 +365,7 @@ void sig_int_handler(int signum) {
 
 int main(int argc, char *argv[]) {
 	if(argc > 2) {
-		fprintf(stderr, "Usage: alg_finder [case_file] ");
+		fprintf(stderr, "Usage: alg_finder [case_file]\n");
 		exit(2);
 	}
 
@@ -377,7 +377,7 @@ int main(int argc, char *argv[]) {
 	// setup to read cases from input
 	uint32_t unsolved_cases_count = 0;
 	uint8_t target_state[STATE_SIZE];
-	uint32_t new_num; // used to receive the input since it will be stored as uint8_t
+	int32_t new_num; // used to receive the input since it will be stored as uint8_t
 	FILE *input_file = (argc == 2) ? fopen(argv[1], "r") : stdin;
 
 	int scanf_status __attribute__((unused));  // used to supresss the compiler warnings about unused values of scanf
@@ -387,22 +387,22 @@ int main(int argc, char *argv[]) {
 	// read target state
 	memset(target_state, ORANGE_CENTER_LABLE, STATE_SIZE);
 	for(int i = 0; i < input_state_size; i++) {
-		scanf_status = fscanf(input_file, "%u", &new_num);
-		target_state[i] = new_num;
+		scanf_status = fscanf(input_file, "%d", &new_num);
+		target_state[i] = (new_num != -1) ? new_num : ORANGE_CENTER_LABLE;
 	}
 
 	// read unsolved cases
 	while(true) {
-		if(fscanf(input_file, "%u", &new_num) == EOF)
+		if(fscanf(input_file, "%d", &new_num) == EOF)
 			break;
 
 		unsolved_case_t *new_unsolved_case = malloc(sizeof(unsolved_case_t));
 
 		memset(new_unsolved_case->state, ORANGE_CENTER_LABLE, STATE_SIZE);
-		new_unsolved_case->state[0] = new_num;
+		new_unsolved_case->state[0] = (new_num != -1) ? new_num : ORANGE_CENTER_LABLE;
 		for(int i = 1; i < input_state_size; i++) {
-			scanf_status = fscanf(input_file, "%u", &new_num);
-			new_unsolved_case->state[i] = new_num;
+			scanf_status = fscanf(input_file, "%d", &new_num);
+			new_unsolved_case->state[i] = (new_num != -1) ? new_num : ORANGE_CENTER_LABLE;
 		}
 
 		if(fscanf(input_file, " : %u", &new_num) > 0)
