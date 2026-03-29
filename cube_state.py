@@ -1,6 +1,6 @@
 from cube import Cube
 from data import CELLS_PER_FACE, STATE_SIZE, PIECES_START_STICKER, ADJ_STICKER, PIECE_COLORS, \
-    STICKER_TO_PIECE_POSITION, PIECE_ORIENTATION_STICKER_NUMBER, \
+    STICKER_TO_CUBIE, PIECE_ORIENTATION_STICKER_NUMBER, \
     MIDDLE_INVERTED_STICKERS, CORNER_120_STICKERS, CORNER_240_STICKERS
 
 
@@ -51,21 +51,25 @@ def is_state_valid(state: tuple[int, ...]) -> bool:
     def check_permutation_parity(state: tuple[int, ...]) -> bool:
         # it is the position, but doesn't care about the orientation, it is more like
         # in the place of which piece in the solved state is this piece currently
-        positions = [STICKER_TO_PIECE_POSITION[sticker] for sticker in state]
+        cubies = [STICKER_TO_CUBIE[sticker] for sticker in state]
+        # no piece overllaping allowed
+        for i in range(STATE_SIZE):  # number of cubies/pieces
+            if i not in cubies:
+                return False
 
         cycle_size_sum = 0
-        for start in positions:
+        for start in cubies:
             if start == -1:  # it was already visited
                 continue
 
             curr = start
-            while positions[curr] != start:
-                next = positions[curr]
-                positions[curr] = -1
+            while cubies[curr] != start:
+                next = cubies[curr]
+                cubies[curr] = -1
                 curr = next
 
                 cycle_size_sum += 1
-            positions[curr] = -1
+            cubies[curr] = -1
 
         return cycle_size_sum % 2 == 0
 

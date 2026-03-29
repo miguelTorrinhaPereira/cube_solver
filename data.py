@@ -1,9 +1,13 @@
+# names are a bit of a mess, sorryg :(
+
+
 # ---------------
 # cube.py
 # ---------------
 
 FACE_COUNT = 6
 CELLS_PER_FACE = 9
+STICKER_COUNT = FACE_COUNT * CELLS_PER_FACE
 DEFAULT_COLORS = [[i] * CELLS_PER_FACE for i in range(FACE_COUNT)]
 ORANGE, BLUE, RED, GREEN, YELLOW, WHITE = tuple(range(FACE_COUNT))
 
@@ -120,8 +124,10 @@ PIECE_COLORS = {
     (1, 2, 4): 19,
 }
 
+# it is the position, but doesn't care about the orientation, it is more like
+# in the place of which piece in the solved state is this piece currently
 # the -1 if for the centers
-STICKER_TO_PIECE_POSITION = (
+STICKER_TO_CUBIE = (
     12, 15, 17, 11, -1, 8, 5, 3, 0,  # L
     17, 18, 19, 8, -1, 9, 0, 1, 2,  # F
     19, 16, 14, 9, -1, 10, 2, 4, 7,  # R
