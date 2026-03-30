@@ -1,5 +1,5 @@
 from cube import Cube
-from data import CELLS_PER_FACE, STATE_SIZE, PIECES_START_STICKER, ADJ_STICKER, PIECE_COLORS, \
+from data import CELLS_PER_FACE, STATE_SIZE, SOLVED_STATE, ADJ_STICKER, PIECE_COLORS, \
     STICKER_TO_CUBIE, PIECE_ORIENTATION_STICKER_NUMBER, \
     MIDDLE_INVERTED_STICKERS, CORNER_120_STICKERS, CORNER_240_STICKERS
 
@@ -7,7 +7,7 @@ from data import CELLS_PER_FACE, STATE_SIZE, PIECES_START_STICKER, ADJ_STICKER, 
 def get_state(cube: Cube) -> tuple[int, ...]:
     state = [-1] * STATE_SIZE
 
-    for start_sticker in PIECES_START_STICKER:
+    for start_sticker in SOLVED_STATE:
         # follow adj_sticker and find all sticker of the piece
         stickers = [start_sticker]
         new_sticker = ADJ_STICKER[start_sticker]

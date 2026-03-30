@@ -94,8 +94,7 @@ TURN_OUTCOME = (
 # ---------------
 
 STATE_SIZE = 20
-# it is the solved cube stickers, but it could be any sticker from the piece
-PIECES_START_STICKER = (8, 16, 17, 7, 25, 6, 34, 26,   5, 14, 23, 3,   0, 28, 20, 1, 19, 2, 10, 11)
+SOLVED_STATE = (8, 16, 17, 7, 25, 6, 34, 26,   5, 14, 23, 3,   0, 28, 20, 1, 19, 2, 10, 11)
 # the adjacent sticker of a sticker by rotating counter clockwise
 ADJ_STICKER = (36, 39, 9, 32, 4, 12, 35, 48, 45, 42, 43, 18, 5, 13, 21, 8, 46, 47, 44, 41, 27, 14, 22, 30, 17, 50, 53,
                38, 37, 0, 23, 31, 3, 26, 52, 51, 29, 28, 20, 1, 40, 19, 2, 10, 11, 15, 16, 24, 7, 49, 25, 6, 34, 33)
