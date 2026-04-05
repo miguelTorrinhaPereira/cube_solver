@@ -1,16 +1,16 @@
 all:
-	gcc -O3 alg_finder2.c hash_table.c queue.c -lm -o alg_finder2
+	gcc -O3 alg_finder.c hash_table.c queue.c -lm -o alg_finder
 
 run: all
-	./alg_finder2 test.in
+	./alg_finder test.in
 
 time: all
-	/bin/time -v ./alg_finder2 test.in
+	/bin/time -v ./alg_finder test.in
 
 profile:
-	gcc -O1 -pg alg_finder2.c hash_table.c queue.c -lm -o alg_finder2
-	./alg_finder2 test.in 
-	gprof alg_finder2 | batcat
+	gcc -O1 -pg alg_finder.c hash_table.c queue.c -lm -o alg_finder
+	./alg_finder test.in 
+	gprof alg_finder | batcat
 
 clean:
 	rm alg_finder*
