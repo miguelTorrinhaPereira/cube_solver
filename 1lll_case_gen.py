@@ -33,8 +33,8 @@ def gen_combinations(n: int, b: int) -> tuple[tuple[int, ...]]:
 
 YELLOW_MIDDLES = (13, 15, 16, 18)
 YELLOW_CORNERS = (12, 14, 17, 19)
-MIDDLES_POS_LIST = permutations([1, 10, 19, 28])
-CORNERS_POS_LIST = permutations([0, 2, 11, 20])
+MIDDLES_POS_LIST = tuple(permutations([1, 10, 19, 28]))
+CORNERS_POS_LIST = tuple(permutations([0, 2, 11, 20]))
 MIDDLES_ORIENTATIONS_LIST = gen_combinations(len(YELLOW_MIDDLES), 2)
 CORNERS_ORIENTATIONS_LIST = gen_combinations(len(YELLOW_CORNERS), 3)
 
