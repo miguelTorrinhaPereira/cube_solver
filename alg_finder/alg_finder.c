@@ -5,6 +5,7 @@
 //TODO: huge pages, 1GB
 //TODO: test weakening the hash function
 //TODO: make the formula for ht size better, 18 * 13.35 ^ (d - 1) * oversupply, maybe calculate the max depth based on available memory dynamicaly (maybe not)
+//TODO: check if hyperthreading makes a diference, the rasberry pi doesn't have hyperthreading
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -23,10 +24,11 @@
 // max is 7, the hash tables will not work with more, the value is only 32 bits
 // but it would be possible to compact the encoding to go up to level 8
 #define MAX_TARGET_DEPTH 7
-#define GODS_NUMBER 20
-#define ALG_BUFF_SIZE (2 * GODS_NUMBER + 1)
-#define ENCODING_BASE (ROTATIONS_COUNT + 1)
-#define ORANGE_CENTER_LABLE 4
+#define GODS_NUMBER 20  // the maximum number of moves of any algorithm for a rubriks cube
+#define ALG_BUFF_SIZE (2 * GODS_NUMBER + 1)  // how many chars do you need to represent the alg in string form
+#define ENCODING_BASE (ROTATIONS_COUNT + 1)  // the base for the compact move encoding,
+											 // ROTATIONS_COUNT isn't enough because 0 can't be used if you don't know the total size of the move sequence
+#define ORANGE_CENTER_LABEL 4  // center pieces are used in irrelevant pieces since they never change position
 
 
 typedef struct {
@@ -43,14 +45,18 @@ typedef struct {
 uint32_t thread_count = 0;
 pthread_t *pthread_tids;
 
+// one hash table per depth including depth 0
+// big_state_ht is separate for performance reasons, it avoid and indirect reference
 Hash_table little_state_hts[MAX_TARGET_DEPTH], big_state_ht;
 
+// shallow target states are the states of depth 1 from the target state
 Queue unsolved_cases_queue, solved_cases_queue, shallow_target_states_queue;
-sem_t solved_cases_sem;
+sem_t solved_cases_sem;  // used to synchronize the main thread and the worker thread when writing the solved cases
 
-pthread_barrier_t ht_construction_barrier;
+pthread_barrier_t ht_construction_barrier;  // used to make all worker threads wait for the others to finish constructing the hts
 
 
+// this is a compact encoding of a move sequence. Basically, we store every move as a digit of a number in base ENCODING_BASE
 uint64_t calc_state_encoding(uint8_t *depth_rotation, uint32_t depth) {
 	uint64_t encoding = depth_rotation[0] + 1;
 	for(int i = 1; i < depth; i++) {
@@ -63,6 +69,7 @@ uint64_t calc_state_encoding(uint8_t *depth_rotation, uint32_t depth) {
 }
 
 
+// gets the string representation of a move sequence based on the encoding of the moves from the initial ad target state
 void get_alg_from_state_encoding(uint64_t initial_state_encoding, uint32_t target_state_encoding, char *alg) {
 	const char *rotations_str_buff[GODS_NUMBER];
 
@@ -110,6 +117,7 @@ void get_alg_from_state_encoding(uint64_t initial_state_encoding, uint32_t targe
 }
 
 
+// just checks if the initial case is in the target hts
 bool solve_case_check_hts(const uint8_t initial_state[STATE_SIZE], uint32_t *target_state_encoding) {
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++) {
 		if(exists_key(little_state_hts[i], initial_state)) {
@@ -127,6 +135,8 @@ bool solve_case_check_hts(const uint8_t initial_state[STATE_SIZE], uint32_t *tar
 }
 
 
+// searches for solutions longer than MAX_TARGET_DEPTH.
+// All such cases naturally have a state in the big_state_ht,
 bool solve_case_search(const uint8_t initial_state[STATE_SIZE], uint32_t max_initial_depth, uint64_t *initial_state_encoding, uint32_t *target_state_encoding) {
 	if(max_initial_depth == 0)  // edge case
 		return false;
@@ -198,6 +208,7 @@ bool solve_case_search(const uint8_t initial_state[STATE_SIZE], uint32_t max_ini
 }
 
 
+// constructs the hash tables that store the states reachable from the target state with depth less or equal to MAX_TARGET_DEPTH
 void build_hash_tables(unsolved_case_t *shallow_state) {
 	uint8_t states[STATE_SIZE * (MAX_TARGET_DEPTH + 1)];
 	uint8_t depth_rotation[MAX_TARGET_DEPTH] = {};
@@ -260,15 +271,17 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 }
 
 
+// stores the current case in the unsolved_cases_queue,
+// it is used when a worker thread is canceled while solving a case
 void giveup_case(void *arg) {
 	unsolved_case_t *current_case = *(unsolved_case_t **)arg;
 	push(unsolved_cases_queue, current_case);
 }
 
 
-void *thread_func(void *tid_p) {
+void *worker_thread_func(void *tid_p) {
 	uint32_t tid = (uint32_t)(long long)tid_p;
-	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);  // it need to be canceled at any point immediately
 
 	// construct state hash tables
 	unsolved_case_t *shallow_state;
@@ -283,7 +296,7 @@ void *thread_func(void *tid_p) {
 	uint32_t target_state_encoding;  // target depth can't because of a limitation of the hash table
 	bool found_solution;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);  // it can't be canceled while getting a case to solve
 	pthread_cleanup_push(giveup_case, &current_case);
 
 	while(true) {
@@ -292,7 +305,7 @@ void *thread_func(void *tid_p) {
 
 		// get new unsolved case
 		current_case = pop(unsolved_cases_queue);
-		if(current_case == NULL)
+		if(current_case == NULL)  // there is no new case to solve
 			break;
 
 		uint32_t max_initial_depth = current_case->info;  // a.k.a search depth
@@ -303,7 +316,7 @@ void *thread_func(void *tid_p) {
 			found_solution = solve_case_check_hts(current_case->state, &target_state_encoding);
 		else
 			found_solution = solve_case_search(current_case->state, max_initial_depth, &initial_state_encoding, &target_state_encoding);
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);  // can't be canceled while storing the newly solved case
 
 		// store results
 		if(found_solution) {
@@ -326,20 +339,22 @@ void *thread_func(void *tid_p) {
 	return NULL;
 }
 
+
 void write_solved_case(solved_case_t *solved_case) {
 	for(int i = 0; i < STATE_SIZE; i++)
-		fprintf(stdout, "%d ", (solved_case->state[i] != ORANGE_CENTER_LABLE) ? solved_case->state[i] : -1);
+		fprintf(stdout, "%d ", (solved_case->state[i] != ORANGE_CENTER_LABEL) ? solved_case->state[i] : -1);
 	fprintf(stdout, ": \"%s\"\n", solved_case->alg);
 }
 
 
 void write_unsolved_case(unsolved_case_t *unsolved_case) {
 	for(int i = 0; i < STATE_SIZE; i++)
-		fprintf(stderr, "%d ", (unsolved_case->state[i] != ORANGE_CENTER_LABLE) ? unsolved_case->state[i] : -1);
+		fprintf(stderr, "%d ", (unsolved_case->state[i] != ORANGE_CENTER_LABEL) ? unsolved_case->state[i] : -1);
 	fprintf(stderr, ": %u\n", unsolved_case->info);
 }
 
 
+// kills all worker threads and writes the solved and unsolved cases
 void sig_int_handler(int signum) {
 	for(int i = 0; i < thread_count; i++)
 		pthread_cancel(pthread_tids[i]);
@@ -369,7 +384,7 @@ int main(int argc, char *argv[]) {
 		exit(2);
 	}
 
-	// init cases queues
+	// initialize cases queues
 	unsolved_cases_queue = create_queue();
 	solved_cases_queue = create_queue();
 	sem_init(&solved_cases_sem, 0, 0);  // the solved_cases_queue starts empty
@@ -380,15 +395,15 @@ int main(int argc, char *argv[]) {
 	int32_t new_num; // used to receive the input since it will be stored as uint8_t
 	FILE *input_file = (argc == 2) ? fopen(argv[1], "r") : stdin;
 
-	int scanf_status __attribute__((unused));  // used to supresss the compiler warnings about unused values of scanf
-	uint32_t input_state_size;
+	int scanf_status __attribute__((unused));  // used to suppress the compiler warnings about unused values of scanf
+	uint32_t input_state_size;  // the user may omit some pieces of the input state if they aren't relevant
 	scanf_status = fscanf(input_file, "%u", &input_state_size);
 
 	// read target state
-	memset(target_state, ORANGE_CENTER_LABLE, STATE_SIZE);
+	memset(target_state, ORANGE_CENTER_LABEL, STATE_SIZE);  // unused pieces will remain the orange center label
 	for(int i = 0; i < input_state_size; i++) {
 		scanf_status = fscanf(input_file, "%d", &new_num);
-		target_state[i] = (new_num != -1) ? new_num : ORANGE_CENTER_LABLE;
+		target_state[i] = (new_num != -1) ? new_num : ORANGE_CENTER_LABEL;
 	}
 
 	// read unsolved cases
@@ -398,11 +413,11 @@ int main(int argc, char *argv[]) {
 
 		unsolved_case_t *new_unsolved_case = malloc(sizeof(unsolved_case_t));
 
-		memset(new_unsolved_case->state, ORANGE_CENTER_LABLE, STATE_SIZE);
-		new_unsolved_case->state[0] = (new_num != -1) ? new_num : ORANGE_CENTER_LABLE;
+		memset(new_unsolved_case->state, ORANGE_CENTER_LABEL, STATE_SIZE);
+		new_unsolved_case->state[0] = (new_num != -1) ? new_num : ORANGE_CENTER_LABEL;
 		for(int i = 1; i < input_state_size; i++) {
 			scanf_status = fscanf(input_file, "%d", &new_num);
-			new_unsolved_case->state[i] = (new_num != -1) ? new_num : ORANGE_CENTER_LABLE;
+			new_unsolved_case->state[i] = (new_num != -1) ? new_num : ORANGE_CENTER_LABEL;
 		}
 
 		if(fscanf(input_file, " : %u", &new_num) > 0)
@@ -443,21 +458,20 @@ int main(int argc, char *argv[]) {
 	sigaction(SIGINT, &sig_act, NULL);
 
 
-	//TODO: check if it makes a diference, the pi doesn't have hyperthreading
-	thread_count = get_nprocs_conf();
+	thread_count = get_nprocs_conf();  // create as many threads as the number of cores (times 2 with hyperthreading)
 	pthread_barrier_init(&ht_construction_barrier, NULL, thread_count);
 
 	// create threads
 	pthread_tids = calloc(thread_count, sizeof(pthread_t));
 	for(int i = 0; i < thread_count; i++)
-		pthread_create(&pthread_tids[i], NULL, thread_func, (void *)(long long)i);
+		pthread_create(&pthread_tids[i], NULL, worker_thread_func, (void *)(long long)i);
 
 	pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
 
 	// main loop, write new solved cases
 	while (unsolved_cases_count) {
-		sem_wait(&solved_cases_sem);
-		pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
+		sem_wait(&solved_cases_sem);  // wait for a worker thread to solve a case
+		pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);  // can't terminate program while writing a solved case
 		solved_case_t *solved_case = pop(solved_cases_queue);
 		write_solved_case(solved_case);
 		free(solved_case);
@@ -466,7 +480,7 @@ int main(int argc, char *argv[]) {
 		pthread_sigmask(SIG_UNBLOCK, &SIGINT_mask, NULL);
 	}
 
-	// cleaup sequence, no cases all left, all threads have exited
+	// cleaup sequence, no cases are left, all worker threads have exited
 	pthread_sigmask(SIG_BLOCK, &SIGINT_mask, NULL);
 
 	for(int i = 0; i < thread_count; i++)
