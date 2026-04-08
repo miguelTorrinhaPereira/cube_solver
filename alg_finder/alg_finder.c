@@ -103,7 +103,7 @@ void get_alg_from_state_encoding(uint64_t initial_state_encoding, uint32_t targe
 		buff_idx++;
 	}
 
-	// joint all moves into one string
+	// join all moves into one string
 	alg[0] = '\0';  // so strcat can start, it need to be an empty string
 	for(buff_idx = 0; buff_idx < alg_size; buff_idx++)
 		strcat(alg, rotations_str_buff[buff_idx]);
@@ -268,6 +268,7 @@ void giveup_case(void *arg) {
 
 void *thread_func(void *tid_p) {
 	uint32_t tid = (uint32_t)(long long)tid_p;
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
 	// construct state hash tables
 	unsolved_case_t *shallow_state;
@@ -279,15 +280,14 @@ void *thread_func(void *tid_p) {
 
 	unsolved_case_t *current_case;
 	uint64_t initial_state_encoding;  // search depth can go deeper than 7
-	uint32_t target_state_encoding;  // limitation of the hash table
+	uint32_t target_state_encoding;  // target depth can't because of a limitation of the hash table
 	bool found_solution;
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 	pthread_cleanup_push(giveup_case, &current_case);
 
 	while(true) {
-		target_state_encoding = initial_state_encoding = 0;  // target_state_encoding could not be zero
+		target_state_encoding = initial_state_encoding = 0;  // target_state_encoding doesn't need to be zero
 		found_solution = false;
 
 		// get new unsolved case
@@ -444,7 +444,7 @@ int main(int argc, char *argv[]) {
 
 
 	//TODO: check if it makes a diference, the pi doesn't have hyperthreading
-	thread_count = get_nprocs_conf() / 2;  // hypperthreading doesn't help in this kind of load
+	thread_count = get_nprocs_conf();
 	pthread_barrier_init(&ht_construction_barrier, NULL, thread_count);
 
 	// create threads
@@ -471,15 +471,4 @@ int main(int argc, char *argv[]) {
 
 	for(int i = 0; i < thread_count; i++)
 		pthread_join(pthread_tids[i], NULL);
-
-	// debug
-	// // for testing hash table distribution
-	// int used_slots = 0;
-	// for(int i = 0; i < get_hash_table_capacity(big_state_ht); i++)
-	// 	used_slots += !!(big_state_ht->table[i]);
-	// printf("%f\n", get_hash_table_count(big_state_ht)/(double)used_slots);
-
-	// for(int i = 0; i<MAX_TARGET_DEPTH; i++)
-	//  	printf("size = %d, %d\n", get_hash_table_count(little_state_hts[i]), get_hash_table_capacity(little_state_hts[i]));
-	// printf("size = %d, %d\n", get_hash_table_count(big_state_ht), get_hash_table_capacity(big_state_ht));
 }
