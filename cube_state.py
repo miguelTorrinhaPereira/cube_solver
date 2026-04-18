@@ -30,8 +30,8 @@ def get_state(cube: Cube) -> tuple[int, ...]:
     return tuple(state)
 
 
-def mask_state(state: tuple[int, ...], mask: tuple[bool, ...]) -> tuple[int, ...]:
-    return tuple([state[i] if mask[i] else -1 for i in range(STATE_SIZE)])
+def mask_state(state: tuple[int, ...], mask: int) -> tuple[int, ...]:
+    return tuple([state[i] if mask & (1 << i) else -1 for i in range(STATE_SIZE)])
 
 
 def is_corner(sticker: int) -> bool:
