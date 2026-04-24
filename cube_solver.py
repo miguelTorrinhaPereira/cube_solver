@@ -2,9 +2,7 @@ from cube import Cube
 from cube_state import get_state, mask_state
 
 # TODO: implement cube rotations x, y and z
-# TODO: implement rotation removal from moves sequences
 # TODO: make a configurable limit in the search depth in alg_finder
-# TODO: create the f2l and 1LLL tables, should be: masked state -> move sequence
 
 
 def gen_cube_orientations(cube: Cube) -> tuple[Cube, ...]:
