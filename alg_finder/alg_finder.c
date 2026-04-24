@@ -1,3 +1,5 @@
+//FIXME: something is wrong with stop mid solve
+//FIXME: segfault with MAX_TARGET_DEPTH = 1
 //TODO: try to join big_ht in to the little_ht array, maybe it doesn't hurt performance
 //TODO: optimize to only use the true state size, but the hash still uses the full state size USED_STATE_SIZE, could help in f2l
 //TODO: SIMD the shitt out of the search function last level step, will need get_entry2 that already receives the hash, previous state and move
@@ -23,7 +25,9 @@
 
 // max is 7, the hash tables will not work with more, the value is only 32 bits
 // but it would be possible to compact the encoding to go up to level 8
-#define MAX_TARGET_DEPTH 7
+#ifndef MAX_TARGET_DEPTH
+	#define MAX_TARGET_DEPTH 7
+#endif
 #define GODS_NUMBER 20  // the maximum number of moves of any algorithm for a rubriks cube
 #define ALG_BUFF_SIZE (2 * GODS_NUMBER + 1)  // how many chars do you need to represent the alg in string form
 #define ENCODING_BASE (ROTATIONS_COUNT + 1)  // the base for the compact move encoding,
