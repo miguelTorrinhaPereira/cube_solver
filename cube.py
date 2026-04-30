@@ -1,18 +1,54 @@
-from data import FACE_COUNT, CELLS_PER_FACE, DEFAULT_COLORS, FACE_COUNT, \
-    LETTER_TO_FACE_NUM, ADJ_FACES_LIST, ADJ_FACES_SECTIONS_LIST, \
+from data import CUBE_ROTATIONS, CUBE_ROTATIONS_MIDDLE_PERMUTATIONS, FACE_COUNT, CELLS_PER_FACE, DEFAULT_COLORS, FACE_COUNT, \
+    ADJ_FACES_LIST, ADJ_FACES_SECTIONS_LIST, ROTATIONS, ROTATIONS_COUNT, ROTATIONS_PER_FACE, \
     SECTION_BEGINNING, SECTION_STEP, MIDDLE_CELLS, CORNER_CELLS, \
-    COLOR_TO_TEXT_COLOR
+    COLOR_TO_TEXT_COLOR, CUBE_ROTATIONS, ROTATION_STR_TO_NUM
 
-# FIXME: middle_cells and corner_cells are useless
+
+RawRotations = tuple[int, ...]
+CubeColors = list[list[int]]
+
+
+def rotations_str_to_raw(rotations: str) -> RawRotations:
+    raw_rotations = []
+
+    for i in range(len(rotations)):
+        if rotations[i] in " 2\'":
+            continue
+
+        if rotations[i] in CUBE_ROTATIONS or i == len(rotations) - 1 or rotations[i+1] not in "2\'":
+            rotation_num = ROTATION_STR_TO_NUM[rotations[i]]
+            raw_rotations.append(rotation_num)
+        else:
+            rotation_num = ROTATION_STR_TO_NUM[rotations[i: i+2]]
+            raw_rotations.append(rotation_num)
+
+    return tuple(raw_rotations)
+
+
+def rotations_raw_to_str(raw_rotations: RawRotations) -> str:
+    rotations = ""
+
+    for rotation_num in raw_rotations:
+        if rotation_num < ROTATIONS_COUNT:
+            rotations += ROTATIONS[rotation_num]
+        else:
+            cube_rotation_num = rotation_num - ROTATIONS_COUNT
+            rotation_num += CUBE_ROTATIONS[cube_rotation_num]
+
+    return rotations
 
 
 class Cube:
-    def __init__(self, colors: list[list[int]] = DEFAULT_COLORS) -> None:
+    def __init__(self, colors: CubeColors = DEFAULT_COLORS) -> None:
         self.colors = [face.copy() for face in colors]
 
 
-    def reset(self):
-        self.colors = [face.copy() for face in DEFAULT_COLORS]
+    def _get_face_num_from_sticker(self, sticker: int) -> int:
+        return sticker // CELLS_PER_FACE
+
+
+    def _get_cell_from_sticker(self, sticker: int) -> int:
+        return sticker % CELLS_PER_FACE
 
 
     def get_face(self, face_num: int) -> list[int]:
@@ -22,26 +58,12 @@ class Cube:
     def get_cell_color(self, face_num: int, cell: int) -> int:
         return self.colors[face_num][cell]
 
+
     def get_sticker_color(self, sticker: int) -> int:
-        return self.colors[sticker // CELLS_PER_FACE][sticker % CELLS_PER_FACE]
+        return self.colors[self._get_face_num_from_sticker(sticker)][self._get_cell_from_sticker(sticker)]
 
 
-    def rotate(self, rotation: str) -> None:
-        face_num = LETTER_TO_FACE_NUM[rotation[0]]
-        if len(rotation) == 1:
-            self.rotate_adj_faces(face_num, True)
-            self.rotate_face(face_num, True)
-        elif rotation[1] == '\'':
-            self.rotate_adj_faces(face_num, False)
-            self.rotate_face(face_num, False)
-        elif rotation[1] == '2':
-            self.rotate_adj_faces(face_num, True)
-            self.rotate_face(face_num, True)
-            self.rotate_adj_faces(face_num, True)
-            self.rotate_face(face_num, True)
-
-
-    def rotate_face_cells(self, face_num: int, cells: tuple[int, ...]) -> None:
+    def _rotate_face_cells(self, face_num: int, cells: tuple[int, ...]) -> None:
         face = self.colors[face_num]
 
         first_cell_color = face[cells[0]]
@@ -52,57 +74,101 @@ class Cube:
         face[cells[-1]] = first_cell_color
 
 
-    def rotate_face(self, face_num: int, clockwise: bool) -> None:
+    def _rotate_face(self, face_num: int, clockwise: bool) -> None:
         middle_cells = MIDDLE_CELLS if clockwise else MIDDLE_CELLS[::-1]
-        self.rotate_face_cells(face_num, middle_cells)
+        self._rotate_face_cells(face_num, middle_cells)
         corner_cells = CORNER_CELLS if clockwise else CORNER_CELLS[::-1]
-        self.rotate_face_cells(face_num, corner_cells)
-        return
+        self._rotate_face_cells(face_num, corner_cells)
 
 
-    def rotate_adj_faces(self, face_num: int, clockwise: bool) -> None:
+    def _rotate_adj_faces(self, face_num: int, clockwise: bool) -> None:
         adj_faces = ADJ_FACES_LIST[face_num] if clockwise else ADJ_FACES_LIST[face_num][::-1]
         adj_faces_sections = ADJ_FACES_SECTIONS_LIST[face_num] if clockwise else ADJ_FACES_SECTIONS_LIST[face_num][::-1]
 
-        first_face_section = self.get_face_section(adj_faces[0], adj_faces_sections[0])
+        first_face_section = self._get_face_section(adj_faces[0], adj_faces_sections[0])
 
         for i in range(3):
-            section = self.get_face_section(adj_faces[i+1], adj_faces_sections[i+1])
-            self.set_face_section(adj_faces[i], adj_faces_sections[i], section)
+            section = self._get_face_section(adj_faces[i+1], adj_faces_sections[i+1])
+            self._set_face_section(adj_faces[i], adj_faces_sections[i], section)
 
-        self.set_face_section(adj_faces[-1], adj_faces_sections[-1], first_face_section)
+        self._set_face_section(adj_faces[-1], adj_faces_sections[-1], first_face_section)
 
 
-    def get_face_section(self, face_num: int, section_num: int) -> list[int]:
+    def _get_face_section(self, face_num: int, section_num: int) -> list[int]:
         face = self.colors[face_num]
         section = []
         cell = SECTION_BEGINNING[section_num]
         step = SECTION_STEP[section_num]
-        for i in range(3):
+        for _ in range(3):
             section.append(face[cell])
             cell += step
 
         return section
 
 
-    def set_face_section(self, face_num: int, section_num: int, new_values: list[int]) -> None:
+    def _set_face_section(self, face_num: int, section_num: int, new_values: list[int]) -> None:
         face = self.colors[face_num]
         cell = SECTION_BEGINNING[section_num]
         step = SECTION_STEP[section_num]
-        for i in range(3):  # 3 is the number of cell in a section
-            face[cell] = new_values[i]
+        for new_cell_value in new_values:
+            face[cell] = new_cell_value
             cell += step
 
 
-    def perform_sequence(self, rotations: str) -> None:
-        for i in range(len(rotations)):
-            if rotations[i] in " 2\'":
-                continue
+    def _rotate(self, rotation_num: int) -> None:
+        face_num = rotation_num // ROTATIONS_PER_FACE
+        rotation_type = rotation_num % ROTATIONS_PER_FACE
 
-            if i == len(rotations) - 1 or rotations[i+1] not in "2\'":
-                self.rotate(rotations[i])
+        if rotation_type == 1:  # double rotation
+            normal_rotation_num = face_num * ROTATIONS_PER_FACE
+            self._rotate(normal_rotation_num)
+            self._rotate(normal_rotation_num)
+        else:  # clockwise or counterclockwise rotation
+            is_clockwise_rotation = (rotation_type == 0)
+            self._rotate_adj_faces(face_num, is_clockwise_rotation)
+            self._rotate_face(face_num, is_clockwise_rotation)
+
+
+    def _permutate_stickers(self, permutation: tuple[tuple[int, ...], ...]) -> None:
+        for cycle in permutation:
+            current_color = self.get_sticker_color(cycle[0])
+
+            for i in range(1, len(cycle)):
+                face_num = self._get_face_num_from_sticker(cycle[i])
+                cell = self._get_cell_from_sticker(cycle[i])
+
+                current_color, self.colors[face_num][cell] = self.colors[face_num][cell], current_color
+
+            face_num = self._get_face_num_from_sticker(cycle[0])
+            cell = self._get_cell_from_sticker(cycle[0])
+            self.colors[face_num][cell] = current_color
+
+
+    def _rotate_cube(self, cube_rotation_num: int) -> None:
+        face_rotations_str = ""
+        if cube_rotation_num == 0:  # x
+            face_rotations_str = "R L' "
+        elif cube_rotation_num == 1:  # y
+            face_rotations_str = "U D' "
+        else:  # z
+            face_rotations_str = "F B' "
+
+        self.perform_rotations(face_rotations_str)
+        self._permutate_stickers(CUBE_ROTATIONS_MIDDLE_PERMUTATIONS[cube_rotation_num])
+
+
+    def perform_raw_rotations(self, raw_rotations: RawRotations) -> None:
+        for rotation_num in raw_rotations:
+            if rotation_num < ROTATIONS_COUNT:
+                self._rotate(rotation_num)
             else:
-                self.rotate(rotations[i:i+2])
+                cube_rotation_num = rotation_num - ROTATIONS_COUNT
+                self._rotate_cube(cube_rotation_num)
+
+
+    def perform_rotations(self, rotations: str) -> None:
+        raw_rotations = rotations_str_to_raw(rotations)
+        self.perform_raw_rotations(raw_rotations)
 
 
     def is_solved(self) -> bool:
@@ -112,6 +178,10 @@ class Cube:
                     return False
 
         return True
+
+
+    def reset(self):
+        self.colors = [face.copy() for face in DEFAULT_COLORS]
 
 
     def copy(self) -> 'Cube':

@@ -1,4 +1,5 @@
-from cube import Cube, rotations
+from cube import Cube
+from data import ROTATIONS
 
 BRACKETS = '{}'
 IDENT = '   '
@@ -6,10 +7,10 @@ POSITION_NUM = 54
 initial_colors = [[face_num * 9 + cell for cell in range(9)] for face_num in range(6)]
 
 print(BRACKETS[0])
-for rotation in rotations:
+for rotation in ROTATIONS:
     colors = [initial_colors[i].copy() for i in range(6)]
     cube = Cube(colors)
-    cube.rotate(rotation)
+    cube._rotate(rotation)
 
     print(IDENT + BRACKETS[0], end="")
     for pos in range(POSITION_NUM):

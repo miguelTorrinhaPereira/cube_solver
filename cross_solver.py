@@ -1,5 +1,5 @@
 from cube import Cube
-from data import CELLS_PER_FACE, ROTATIONS, ROTATIONS_NUM, ROTATIONS_PER_FACE, MIDDLE_CELLS, WHITE, \
+from data import CELLS_PER_FACE, ROTATIONS, ROTATIONS_COUNT, ROTATIONS_PER_FACE, MIDDLE_CELLS, WHITE, \
     TURN_OUTCOME, ADJ_STICKER
 
 # -------------------------------------------
@@ -14,7 +14,7 @@ SOLVED_STATE = [48, 46, 50, 52]
 
 
 def get_section_size(depth: int) -> int:
-    return ROTATIONS_NUM ** depth
+    return ROTATIONS_COUNT ** depth
 
 
 def get_section_start(depth: int) -> int:
@@ -43,17 +43,17 @@ def explorer_buff(buff: list[list[int]]) -> None:
             continue
 
         if i != 0:
-            last_rotated_face = ((i - 1) % ROTATIONS_NUM) // ROTATIONS_PER_FACE
+            last_rotated_face = ((i - 1) % ROTATIONS_COUNT) // ROTATIONS_PER_FACE
         else:
             last_rotated_face = -1
 
         for piece in range(STATE_SIZE):
-            for rotation in range(ROTATIONS_NUM):
+            for rotation in range(ROTATIONS_COUNT):
                 if rotation // ROTATIONS_PER_FACE == last_rotated_face:
                     continue
 
                 pos = buff[i][piece]
-                buff[ROTATIONS_NUM * i + rotation + 1][piece] = TURN_OUTCOME[rotation][pos]
+                buff[ROTATIONS_COUNT * i + rotation + 1][piece] = TURN_OUTCOME[rotation][pos]
 
 
 def contains_state(buff: list[list[int]], key: list[int]) -> bool:
@@ -125,13 +125,13 @@ def solve_cross(cube: Cube) -> str:
 
     solution = ""
     while initial_buff_idx > 0:
-        solution = ROTATIONS[(initial_buff_idx - 1) % ROTATIONS_NUM] + solution
-        initial_buff_idx = (initial_buff_idx - 1) // ROTATIONS_NUM
+        solution = ROTATIONS[(initial_buff_idx - 1) % ROTATIONS_COUNT] + solution
+        initial_buff_idx = (initial_buff_idx - 1) // ROTATIONS_COUNT
 
     while solved_buff_idx > 0:
-        rotation = (solved_buff_idx - 1) % ROTATIONS_NUM
+        rotation = (solved_buff_idx - 1) % ROTATIONS_COUNT
         solution = solution + ROTATIONS[rotation - 2 * (rotation % 3) + 2]
-        solved_buff_idx = (solved_buff_idx - 1) // ROTATIONS_NUM
+        solved_buff_idx = (solved_buff_idx - 1) // ROTATIONS_COUNT
 
 
     cube.perform_sequence(solution)

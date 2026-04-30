@@ -1,19 +1,10 @@
 import sys
 from cube_state import is_corner, is_middle
-from data import STATE_SIZE, STICKER_COUNT, STICKER_TO_CUBIE
+from data import STICKER_COUNT, STICKER_TO_CUBIE, PAIRS, PAIR_COUNT
 
 
-OUTPUT_STATE_SIZE = STATE_SIZE - 8
-# ((cubie_corner, sticker_corner), (cubie_middle, sticker_middle))
-BLUE_RED_PAIR = ((2, 17), (9, 14))
-RED_GREEN_PAIR = ((7, 26), (10, 23))
-GREEN_ORANGE_PAIR = ((5, 6), (11, 3))
-ORANGE_BLUE_PAIR = ((0, 8), (8, 5))
-
-PAIRS = (BLUE_RED_PAIR, RED_GREEN_PAIR, GREEN_ORANGE_PAIR, ORANGE_BLUE_PAIR)
-PAIR_COUNT = len(PAIRS)
-
-INITIAL_STATE = [-1, 16, -1, 7, 25, -1, 34, -1,   -1, -1, -1, -1,   -1, -1, -1, -1, -1, -1, -1, -1]
+INITIAL_STATE = (-1, 16, -1, 7, 25, -1, 34, -1,   -1, -1, -1, -1)
+OUTPUT_STATE_SIZE = len(INITIAL_STATE)
 
 
 def gen_combinations(n: int, b: int) -> tuple[tuple[int, ...]]:
@@ -39,8 +30,8 @@ def gen_combinations(n: int, b: int) -> tuple[tuple[int, ...]]:
 
 
 def print_state(state):
-    for i in range(OUTPUT_STATE_SIZE):
-        print(state[i], end=" ")
+    for i in state:
+        print(i, end=" ")
     print()
 
 
@@ -55,7 +46,7 @@ for to_solve_pair in range(PAIR_COUNT):
 
     for pair_states in PAIR_STATES_LISTS:
 
-        state = INITIAL_STATE.copy()
+        state = list(INITIAL_STATE)
         for i, pair_num in enumerate(other_pairs):
             if pair_states[i]:
                 for cubie, sticker in PAIRS[pair_num]:

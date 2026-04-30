@@ -1,4 +1,4 @@
-# names are a bit of a mess, sorryg :(
+# names are a bit of a mess, sorry :(
 
 
 # ---------------
@@ -12,8 +12,12 @@ DEFAULT_COLORS = [[i] * CELLS_PER_FACE for i in range(FACE_COUNT)]
 ORANGE, BLUE, RED, GREEN, YELLOW, WHITE = tuple(range(FACE_COUNT))
 
 ROTATIONS = ("L", "L2", "L'", "F", "F2", "F'", "R", "R2", "R'", "B", "B2", "B'", "U", "U2", "U'", "D", "D2", "D'")
-ROTATIONS_NUM = len(ROTATIONS)
-ROTATIONS_PER_FACE = ROTATIONS_NUM // 6
+ROTATIONS_COUNT = len(ROTATIONS)
+ROTATIONS_PER_FACE = ROTATIONS_COUNT // FACE_COUNT
+CUBE_ROTATIONS = ("x", "y", "z")
+
+ROTATION_STR_TO_NUM = {"L": 0, "L2": 1, "L'": 2, "F": 3, "F2": 4, "F'": 5, "R": 6, "R2": 7, "R'": 8, "B": 9, "B2": 10,
+                       "B'": 11, "U": 12, "U2": 13, "U'": 14, "D": 15, "D2": 16, "D'": 17, "x": 18, "y": 19, "z": 20}
 
 LETTER_TO_FACE_NUM = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
 #   U
@@ -24,7 +28,7 @@ LETTER_TO_FACE_NUM = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
 # 0 1 2 3
 #   5
 #
-# the adjancent faces are listed counter clockwise
+# the adjacent faces are listed counter clockwise
 ADJ_FACES_LIST = (
     (1, 4, 3, 5),
     (0, 5, 2, 4),
@@ -51,6 +55,16 @@ SECTION_STEP = (1, 3, -1, -3)
 # listed counter clockwise, the order matters
 MIDDLE_CELLS = (1, 3, 7, 5)
 CORNER_CELLS = (0, 6, 8, 2)
+
+# used in the cube rotations
+CUBE_ROTATIONS = ("x", "y", "z")
+# the stickers that need to bee changed in the middle, annotated with cyclic permutation notation
+CUBE_ROTATIONS_MIDDLE_PERMUTATIONS = (
+    ((37, 34, 46, 10), (40, 31, 49, 13), (43, 28, 52, 16)),
+    ((30, 21, 12, 3), (31, 22, 13, 4), (32, 23, 14, 5)),
+    ((1, 41, 25, 48), (4, 40, 22, 49), (7, 39, 19, 50)),
+)
+
 # para fazer o display do cubo
 COLOR_TO_TEXT_COLOR = (
     (255, 89, 0),
@@ -141,3 +155,16 @@ PIECE_ORIENTATION_STICKER_NUMBER = (1, 0, 1, 0, 1, 2, 1, 1,    0, 0, 0, 1,   1, 
 MIDDLE_INVERTED_STICKERS = (46, 48, 25, 34,   12, 21, 30, 3,  37, 1, 41, 10)
 CORNER_120_STICKERS = (8, 17, 26, 35, 0, 9, 18, 27)
 CORNER_240_STICKERS = (6, 15, 24, 33, 2, 11, 20, 29)
+
+# ---------------
+# cube_solver.py
+# ---------------
+
+# ((cubie_corner, sticker_corner), (cubie_middle, sticker_middle))
+BLUE_RED_PAIR = ((2, 17), (9, 14))
+RED_GREEN_PAIR = ((7, 26), (10, 23))
+GREEN_ORANGE_PAIR = ((5, 6), (11, 3))
+ORANGE_BLUE_PAIR = ((0, 8), (8, 5))
+
+PAIRS = (BLUE_RED_PAIR, RED_GREEN_PAIR, GREEN_ORANGE_PAIR, ORANGE_BLUE_PAIR)
+PAIR_COUNT = len(PAIRS)
