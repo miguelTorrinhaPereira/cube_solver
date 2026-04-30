@@ -38,6 +38,17 @@ def rotations_raw_to_str(raw_rotations: RawRotations) -> str:
     return rotations
 
 
+def decompose_rotation_num(rotation_num: int) -> tuple[int, int]:
+    face_num = rotation_num // ROTATIONS_PER_FACE
+    rotation_type = rotation_num % ROTATIONS_PER_FACE
+    return face_num, rotation_type
+
+
+def compose_rotation_num(face_num: int, rotation_type: int) -> int:
+    return face_num * ROTATIONS_PER_FACE + rotation_type
+
+
+
 class Cube:
     def __init__(self, colors: CubeColors = DEFAULT_COLORS) -> None:
         self.colors = [face.copy() for face in colors]
@@ -116,8 +127,7 @@ class Cube:
 
 
     def _rotate(self, rotation_num: int) -> None:
-        face_num = rotation_num // ROTATIONS_PER_FACE
-        rotation_type = rotation_num % ROTATIONS_PER_FACE
+        face_num, rotation_type = decompose_rotation_num(rotation_num)
 
         if rotation_type == 1:  # double rotation
             normal_rotation_num = face_num * ROTATIONS_PER_FACE
