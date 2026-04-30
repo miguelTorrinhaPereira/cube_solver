@@ -48,18 +48,20 @@ def compose_rotation_num(face_num: int, rotation_type: int) -> int:
     return face_num * ROTATIONS_PER_FACE + rotation_type
 
 
+def decompose_sticker(sticker: int) -> tuple[int, int]:
+    face_num = sticker // CELLS_PER_FACE
+    cell = sticker % CELLS_PER_FACE
+    return face_num, cell
+
+
+def compose_sticker(face_num: int, cell: int) -> int:
+    return face_num * CELLS_PER_FACE + cell
+
+
 
 class Cube:
     def __init__(self, colors: CubeColors = DEFAULT_COLORS) -> None:
         self.colors = [face.copy() for face in colors]
-
-
-    def _get_face_num_from_sticker(self, sticker: int) -> int:
-        return sticker // CELLS_PER_FACE
-
-
-    def _get_cell_from_sticker(self, sticker: int) -> int:
-        return sticker % CELLS_PER_FACE
 
 
     def get_face(self, face_num: int) -> list[int]:
@@ -71,7 +73,8 @@ class Cube:
 
 
     def get_sticker_color(self, sticker: int) -> int:
-        return self.colors[self._get_face_num_from_sticker(sticker)][self._get_cell_from_sticker(sticker)]
+        face_num, cell = decompose_sticker(sticker)
+        return self.colors[face_num][cell]
 
 
     def _rotate_face_cells(self, face_num: int, cells: tuple[int, ...]) -> None:
@@ -144,13 +147,10 @@ class Cube:
             current_color = self.get_sticker_color(cycle[0])
 
             for i in range(1, len(cycle)):
-                face_num = self._get_face_num_from_sticker(cycle[i])
-                cell = self._get_cell_from_sticker(cycle[i])
-
+                face_num, cell = decompose_sticker(cycle[i])
                 current_color, self.colors[face_num][cell] = self.colors[face_num][cell], current_color
 
-            face_num = self._get_face_num_from_sticker(cycle[0])
-            cell = self._get_cell_from_sticker(cycle[0])
+            face_num, cell = decompose_sticker(cycle[0])
             self.colors[face_num][cell] = current_color
 
 

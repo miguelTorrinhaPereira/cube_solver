@@ -83,8 +83,7 @@ def solve_cube(scrambled_cube_colors: CubeColors) -> RawRotations:
     for cube, cube_rotations, unsolved_pairs in cubes:
         solutions_unnormalized += [(cube_rotations, solution) for solution in solve_f2l_and_1lll(cube, unsolved_pairs)]
 
-    # FIXME: this is giving erros
-    solutions = tuple(map(lambda x, y: normalize_rotation_sequence(x, y), solutions_unnormalized))
+    solutions = tuple(map(lambda t: normalize_rotation_sequence(t[0], t[1]), solutions_unnormalized))
     solutions = tuple(map(optmize_rotation_sequence, solutions))
 
     shortest_solution_idx = 0
