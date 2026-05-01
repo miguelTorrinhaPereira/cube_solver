@@ -75,4 +75,4 @@ Every piece uses its sticker with the lowest numerical value to identify its pos
 
 ### solved cube state
 
-8 16 19 7 25 6 34 26   5 14 23 3   0 28 20 1 19 2 10 11
+8 16 17 7 25 6 34 26   5 14 23 3   0 28 20 1 19 2 10 11
