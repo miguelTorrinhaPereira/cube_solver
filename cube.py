@@ -26,16 +26,16 @@ def rotations_str_to_raw(rotations: str) -> RawRotations:
 
 
 def rotations_raw_to_str(raw_rotations: RawRotations) -> str:
-    rotations = ""
+    rotations_strings = []
 
     for rotation_num in raw_rotations:
         if rotation_num < ROTATIONS_COUNT:
-            rotations += ROTATIONS[rotation_num]
+            rotations_strings.append(ROTATIONS[rotation_num])
         else:
             cube_rotation_num = rotation_num - ROTATIONS_COUNT
-            rotation_num += CUBE_ROTATIONS[cube_rotation_num]
+            rotations_strings.append(CUBE_ROTATIONS[cube_rotation_num])
 
-    return rotations
+    return " ".join(rotations_strings)
 
 
 def decompose_rotation_num(rotation_num: int) -> tuple[int, int]:

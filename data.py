@@ -10,6 +10,7 @@ CELLS_PER_FACE = 9
 STICKER_COUNT = FACE_COUNT * CELLS_PER_FACE
 DEFAULT_COLORS = [[i] * CELLS_PER_FACE for i in range(FACE_COUNT)]
 ORANGE, BLUE, RED, GREEN, YELLOW, WHITE = tuple(range(FACE_COUNT))
+GREY = FACE_COUNT  # this color is used when you don't want some piece to be included in the state
 
 ROTATIONS = ("L", "L2", "L'", "F", "F2", "F'", "R", "R2", "R'", "B", "B2", "B'", "U", "U2", "U'", "D", "D2", "D'")
 ROTATIONS_COUNT = len(ROTATIONS)
@@ -73,6 +74,7 @@ COLOR_TO_TEXT_COLOR = (
     (0, 155, 72),
     (255, 213, 0),
     (255, 255, 255),
+    (25, 25, 25),
 )
 
 

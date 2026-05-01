@@ -1,6 +1,6 @@
 from cube import Cube, CubeColors, decompose_sticker
-from data import CELLS_PER_FACE, DEFAULT_COLORS, STATE_SIZE, SOLVED_STATE, ADJ_STICKER, PIECE_COLORS, \
-    STICKER_TO_CUBIE, PIECE_ORIENTATION_STICKER_NUMBER, \
+from data import CELLS_PER_FACE, FACE_COUNT, STATE_SIZE, SOLVED_STATE, ADJ_STICKER, PIECE_COLORS, \
+    GREY, STICKER_TO_CUBIE, PIECE_ORIENTATION_STICKER_NUMBER, \
     MIDDLE_INVERTED_STICKERS, CORNER_120_STICKERS, CORNER_240_STICKERS
 
 
@@ -29,6 +29,9 @@ def get_state(cube: Cube) -> CubeState:
 
         # get the colors
         colors = tuple(map(cube.get_sticker_color, stickers))
+        # this piece should be ignored
+        if GREY in colors:
+            continue
         # get the piece number from the colors
         piece_number = PIECE_COLORS.index(colors)
 
@@ -39,9 +42,12 @@ def get_state(cube: Cube) -> CubeState:
 
 
 def get_cube_colors_from_state(state: CubeState) -> CubeColors:
-    cube_colors = [face.copy() for face in DEFAULT_COLORS]
+    cube_colors = [[GREY] * CELLS_PER_FACE for _ in range(FACE_COUNT)]
 
     for i in range(STATE_SIZE):
+        if state[i] == -1:
+            continue
+
         piece_colors = PIECE_COLORS[i]
 
         identifier_sticker = state[i]
@@ -58,6 +64,12 @@ def get_cube_colors_from_state(state: CubeState) -> CubeColors:
                 break
 
     return cube_colors
+
+
+def print_state(state: CubeState) -> None:
+    for i in state:
+        print(i, end=" ")
+    print()
 
 
 def mask_state(state: CubeState, mask: int) -> CubeState:
