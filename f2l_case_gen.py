@@ -62,7 +62,7 @@ for to_solve_pair in range(PAIR_COUNT):
         print_state(final_state)
         print()
 
-        used_cubies = tuple([STICKER_TO_CUBIE[sticker] for sticker in state])
+        used_cubies = tuple([STICKER_TO_CUBIE[sticker] for sticker in state if sticker != -1])
         corner_cubie = PAIRS[to_solve_pair][0][0]
         middle_cubie = PAIRS[to_solve_pair][1][0]
 
@@ -71,8 +71,7 @@ for to_solve_pair in range(PAIR_COUNT):
                 continue
 
             for middle in range(STICKER_COUNT):
-                if not is_middle(middle) or STICKER_TO_CUBIE[middle] in used_cubies or \
-                   STICKER_TO_CUBIE[corner] == STICKER_TO_CUBIE[middle]:
+                if not is_middle(middle) or STICKER_TO_CUBIE[middle] in used_cubies:
                     continue
 
                 state[corner_cubie] = corner
