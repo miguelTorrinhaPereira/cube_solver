@@ -66,10 +66,11 @@ def get_cube_colors_from_state(state: CubeState) -> CubeColors:
     return cube_colors
 
 
-def print_state(state: CubeState) -> None:
+def state_to_str(state: CubeState) -> str:
+    string = ""
     for i in state:
-        print(i, end=" ")
-    print()
+        string += str(i) + " "
+    return string[:-1]  # remove the last space
 
 
 def mask_state(state: CubeState, mask: int) -> CubeState:
