@@ -1,6 +1,8 @@
-from cube import Cube, CubeColors, RawRotations, decompose_rotation_num, compose_rotation_num, rotations_raw_to_str, rotations_str_to_raw
-from cube_state import get_state, mask_state, state_to_str, get_cube_colors_from_state
-from data import FACE_COUNT, LETTER_TO_FACE_NUM, ADJ_FACES_LIST, PAIRS, PAIR_COUNT, SOLVED_STATE, STATE_SIZE, OPOSITE_FACE
+from cube import Cube, CubeColors, RawRotations, \
+    decompose_rotation_num, compose_rotation_num, \
+    rotations_str_to_raw, calc_new_face_mapping
+from cube_state import get_state, mask_state, state_to_str
+from data import PAIRS, PAIR_COUNT, SOLVED_STATE, STATE_SIZE, OPOSITE_FACE
 from algs import ALGS
 
 from os import unlink, system
@@ -15,28 +17,25 @@ STATES_FILE_PATH = "/tmp/states.in"
 ALGS_FILE_PATH = "/tmp/algs.out"
 
 
-# FIXME: when rotating the cube, it also need to switch the colors
-# you can create a special function in the cube class, and remove cube rotations as normal movemnts
+# saves 2.6 moves on average
 def gen_cube_orientations(cube: Cube) -> tuple[Cube, ...]:
     scrambled_cubes = []
-    for cube_rotations in CUBE_ROTATIONS_SEQUENCES[:1]:  #FIXME:
+    for cube_rotations in CUBE_ROTATIONS_SEQUENCES:
         new_cube = cube.copy()
-        new_cube.perform_rotations(cube_rotations)
+        new_cube.rotate_cube(cube_rotations)
         scrambled_cubes.append(new_cube)
 
     return tuple(scrambled_cubes)
 
 
 def solve_crosses(cubes: tuple[Cube, ...]) -> tuple[tuple[RawRotations, ...]]:
-    solutions = [[]] * len(cubes)
+    solutions = [[] for _ in cubes]
 
     for pair_of_pairs in PAIRS_OF_PAIRS:
         mask = CROSS_MASK | PAIRS_MASKS[pair_of_pairs[0]] | PAIRS_MASKS[pair_of_pairs[1]]
 
         target_state = mask_state(SOLVED_STATE, mask)
         initial_states = [mask_state(get_state(cube), mask) for cube in cubes]
-        # for i in initial_states:
-        #     print(Cube(get_cube_colors_from_state(i)))
 
         with open(STATES_FILE_PATH, "w") as states_file:
             states_file.write(str(STATE_SIZE) + "\n")
@@ -104,19 +103,7 @@ def solve_f2l_and_1lll(cube: Cube) -> tuple[RawRotations, ...]:
 
 
 def normalize_rotation_sequence(cube_rotations: str, unnormalized_rotation_sequence: RawRotations) -> RawRotations:
-    new_face_mapping = list(range(FACE_COUNT))
-    for cube_rotation in cube_rotations:
-        face_letter = {"x": "R", "y": "U", "z": "F"}[cube_rotation]
-        face_num = LETTER_TO_FACE_NUM[face_letter]
-
-        # it only has a single cycle,
-        # and it must be inverted because they are listed in counter clockwise order
-        face_permutation = ADJ_FACES_LIST[face_num][::-1]
-
-        current_face = new_face_mapping[face_permutation[0]]
-        for i in range(1, len(face_permutation)):
-            current_face, new_face_mapping[face_permutation[i]] = new_face_mapping[face_permutation[i]], current_face
-        new_face_mapping[face_permutation[0]] = current_face
+    new_face_mapping = calc_new_face_mapping(cube_rotations, True)
 
     normalized_rotation_sequence = []
     for rotation_num in unnormalized_rotation_sequence:
@@ -167,6 +154,7 @@ def optmize_rotation_sequence(rotations: RawRotations) -> RawRotations:
     return tuple([compose_rotation_num(face_num, rotations_type) for face_num, rotations_type in decomposed_rotations])
 
 
+# 27.8 moves on average!!!
 def solve_cube(scrambled_cube_colors: CubeColors) -> RawRotations:
     scrambled_cube = Cube(scrambled_cube_colors)
 
@@ -174,10 +162,6 @@ def solve_cube(scrambled_cube_colors: CubeColors) -> RawRotations:
 
     # multiple algs for a single cube
     cross_algs = solve_crosses(base_orientation_cubes)
-
-    # for i in range(1):
-    #     for cross_alg in cross_algs[i]:
-    #         print(rotations_raw_to_str(cross_alg))
 
     solutions = []
     for i in range(len(base_orientation_cubes)):
@@ -189,9 +173,7 @@ def solve_cube(scrambled_cube_colors: CubeColors) -> RawRotations:
 
             solutions += [normalize_rotation_sequence(CUBE_ROTATIONS_SEQUENCES[i], solution) for solution in unnormalized_solutions]
 
-    # solutions = tuple(map(optmize_rotation_sequence, solutions))
-    # for alg in solutions:
-    #     print(rotations_raw_to_str(alg))
+    solutions = tuple(map(optmize_rotation_sequence, solutions))
 
     shortest_solution_idx = 0
     for i in range(1, len(solutions)):

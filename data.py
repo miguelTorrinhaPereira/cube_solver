@@ -18,9 +18,6 @@ ROTATIONS_PER_FACE = ROTATIONS_COUNT // FACE_COUNT
 ROTATIONS_TYPE_COUNT = (ROTATIONS_COUNT // FACE_COUNT - 1)
 CUBE_ROTATIONS = ("x", "y", "z")
 
-ROTATION_STR_TO_NUM = {"L": 0, "L2": 1, "L'": 2, "F": 3, "F2": 4, "F'": 5, "R": 6, "R2": 7, "R'": 8, "B": 9, "B2": 10,
-                       "B'": 11, "U": 12, "U2": 13, "U'": 14, "D": 15, "D2": 16, "D'": 17, "x": 18, "y": 19, "z": 20}
-
 #   U
 # L F R B
 #   D
@@ -64,11 +61,11 @@ CORNER_CELLS = (0, 6, 8, 2)
 # used in the cube rotations
 CUBE_ROTATIONS = ("x", "y", "z")
 # the stickers that need to bee changed in the middle, annotated with cyclic permutation notation
-CUBE_ROTATIONS_MIDDLE_PERMUTATIONS = (
-    ((37, 34, 46, 10), (40, 31, 49, 13), (43, 28, 52, 16)),
-    ((30, 21, 12, 3), (31, 22, 13, 4), (32, 23, 14, 5)),
-    ((1, 41, 25, 48), (4, 40, 22, 49), (7, 39, 19, 50)),
-)
+CUBE_ROTATIONS_MIDDLE_PERMUTATIONS = {
+    "x": ((37, 34, 46, 10), (40, 31, 49, 13), (43, 28, 52, 16)),
+    "y": ((30, 21, 12, 3), (31, 22, 13, 4), (32, 23, 14, 5)),
+    "z": ((1, 41, 25, 48), (4, 40, 22, 49), (7, 39, 19, 50)),
+}
 
 # para fazer o display do cubo
 COLOR_TO_TEXT_COLOR = (

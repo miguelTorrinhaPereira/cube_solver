@@ -1,11 +1,15 @@
-from data import CUBE_ROTATIONS, CUBE_ROTATIONS_MIDDLE_PERMUTATIONS, FACE_COUNT, CELLS_PER_FACE, DEFAULT_COLORS, ROTATIONS_TYPE_COUNT, \
-    ADJ_FACES_LIST, ADJ_FACES_SECTIONS_LIST, ROTATIONS, ROTATIONS_COUNT, ROTATIONS_PER_FACE, \
+from data import CUBE_ROTATIONS_MIDDLE_PERMUTATIONS, FACE_COUNT, CELLS_PER_FACE, ROTATIONS_TYPE_COUNT, \
+    ADJ_FACES_LIST, ADJ_FACES_SECTIONS_LIST, ROTATIONS, ROTATIONS_PER_FACE, \
     SECTION_BEGINNING, SECTION_STEP, MIDDLE_CELLS, CORNER_CELLS, \
-    COLOR_TO_TEXT_COLOR, CUBE_ROTATIONS, ROTATION_STR_TO_NUM
+    COLOR_TO_TEXT_COLOR, DEFAULT_COLORS, STICKER_COUNT, LETTER_TO_FACE_NUM
 
 
 RawRotations = tuple[int, ...]
 CubeColors = list[list[int]]
+
+
+# I leave the face letter insted of face numbers for clarity
+CUBE_ROTATIONS_ASSOCIATED_FACE = {"x": "R", "y": "U", "z": "F"}
 
 
 def rotations_str_to_raw(rotations: str) -> RawRotations:
@@ -15,26 +19,18 @@ def rotations_str_to_raw(rotations: str) -> RawRotations:
         if rotations[i] in " 2\'":
             continue
 
-        if rotations[i] in CUBE_ROTATIONS or i == len(rotations) - 1 or rotations[i+1] not in "2\'":
-            rotation_num = ROTATION_STR_TO_NUM[rotations[i]]
+        if i == len(rotations) - 1 or rotations[i+1] not in "2\'":
+            rotation_num = ROTATIONS.index(rotations[i])
             raw_rotations.append(rotation_num)
         else:
-            rotation_num = ROTATION_STR_TO_NUM[rotations[i: i+2]]
+            rotation_num = ROTATIONS.index(rotations[i: i+2])
             raw_rotations.append(rotation_num)
 
     return tuple(raw_rotations)
 
 
 def rotations_raw_to_str(raw_rotations: RawRotations) -> str:
-    rotations_strings = []
-
-    for rotation_num in raw_rotations:
-        if rotation_num < ROTATIONS_COUNT:
-            rotations_strings.append(ROTATIONS[rotation_num])
-        else:
-            cube_rotation_num = rotation_num - ROTATIONS_COUNT
-            rotations_strings.append(CUBE_ROTATIONS[cube_rotation_num])
-
+    rotations_strings = [ROTATIONS[rotation_num] for rotation_num in raw_rotations]
     return " ".join(rotations_strings)
 
 
@@ -66,6 +62,25 @@ def compose_sticker(face_num: int, cell: int) -> int:
     return face_num * CELLS_PER_FACE + cell
 
 
+# kinda sloppy putting it here, but cube_solver alsos uses this logic
+def calc_new_face_mapping(cube_rotations: str, clockwise: bool) -> tuple[int, ...]:
+    new_face_mapping = list(range(FACE_COUNT))
+    for cube_rotation in cube_rotations:
+        face_letter = CUBE_ROTATIONS_ASSOCIATED_FACE[cube_rotation]
+        face_num = LETTER_TO_FACE_NUM[face_letter]
+
+        # it only has a single cycle
+        # ADJ_FACES_LIST lists the faces in counter clockwise order
+        face_permutation = ADJ_FACES_LIST[face_num][::-1] if clockwise else ADJ_FACES_LIST[face_num]
+
+        current_face = new_face_mapping[face_permutation[0]]
+        for i in range(1, len(face_permutation)):
+            current_face, new_face_mapping[face_permutation[i]] = new_face_mapping[face_permutation[i]], current_face
+        new_face_mapping[face_permutation[0]] = current_face
+
+    return tuple(new_face_mapping)
+
+
 
 class Cube:
     def __init__(self, colors: CubeColors = DEFAULT_COLORS) -> None:
@@ -83,6 +98,11 @@ class Cube:
     def get_sticker_color(self, sticker: int) -> int:
         face_num, cell = decompose_sticker(sticker)
         return self.colors[face_num][cell]
+
+
+    def set_sticker_color(self, sticker: int, new_color: int) -> None:
+        face_num, cell = decompose_sticker(sticker)
+        self.colors[face_num][cell] = new_color
 
 
     def _rotate_face_cells(self, face_num: int, cells: tuple[int, ...]) -> None:
@@ -152,36 +172,43 @@ class Cube:
 
     def _permutate_stickers(self, permutation: tuple[tuple[int, ...], ...]) -> None:
         for cycle in permutation:
-            current_color = self.get_sticker_color(cycle[0])
+            curr_color = self.get_sticker_color(cycle[0])
 
             for i in range(1, len(cycle)):
-                face_num, cell = decompose_sticker(cycle[i])
-                current_color, self.colors[face_num][cell] = self.colors[face_num][cell], current_color
+                tmp_color = self.get_sticker_color(cycle[i])
+                self.set_sticker_color(cycle[i], curr_color)
+                curr_color = tmp_color
 
-            face_num, cell = decompose_sticker(cycle[0])
-            self.colors[face_num][cell] = current_color
+            self.set_sticker_color(cycle[0], curr_color)
 
 
-    def _rotate_cube(self, cube_rotation_num: int) -> None:
-        face_rotations_str = ""
-        if cube_rotation_num == 0:  # x
-            face_rotations_str = "R L' "
-        elif cube_rotation_num == 1:  # y
-            face_rotations_str = "U D' "
-        else:  # z
-            face_rotations_str = "F B' "
+    def _switch_colors(self, new_colors_mapping: tuple[int, ...]) -> None:
+        for sticker in range(STICKER_COUNT):
+            curr_color = self.get_sticker_color(sticker)
+            new_color = new_colors_mapping[curr_color]
+            self.set_sticker_color(sticker, new_color)
 
-        self.perform_rotations(face_rotations_str)
-        self._permutate_stickers(CUBE_ROTATIONS_MIDDLE_PERMUTATIONS[cube_rotation_num])
+
+    def rotate_cube(self, cube_rotations: str) -> None:
+        for cube_rotation in cube_rotations:
+            face_rotations_str = ""
+
+            if cube_rotation == "x":
+                face_rotations_str = "R L' "
+            elif cube_rotation == "y":
+                face_rotations_str = "U D' "
+            else:  # z
+                face_rotations_str = "F B' "
+
+            self.perform_rotations(face_rotations_str)
+            self._permutate_stickers(CUBE_ROTATIONS_MIDDLE_PERMUTATIONS[cube_rotation])
+
+        self._switch_colors(calc_new_face_mapping(cube_rotations, False))
 
 
     def perform_raw_rotations(self, raw_rotations: RawRotations) -> None:
         for rotation_num in raw_rotations:
-            if rotation_num < ROTATIONS_COUNT:
-                self._rotate(rotation_num)
-            else:
-                cube_rotation_num = rotation_num - ROTATIONS_COUNT
-                self._rotate_cube(cube_rotation_num)
+            self._rotate(rotation_num)
 
 
     def perform_rotations(self, rotations: str) -> None:
@@ -192,7 +219,7 @@ class Cube:
     def is_solved(self) -> bool:
         for face_num in range(FACE_COUNT):
             for cell in range(CELLS_PER_FACE):
-                if self.colors[face_num][cell] != DEFAULT_COLORS[face_num][cell]:
+                if self.get_cell_color(face_num, cell) != DEFAULT_COLORS[face_num][cell]:
                     return False
 
         return True
