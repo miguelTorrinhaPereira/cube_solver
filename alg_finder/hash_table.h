@@ -58,7 +58,7 @@ int change_entry(Hash_table hash_table, const uint8_t *key, uint32_t new_value);
 
 // should be statis, but exists_key is basically a wrapper to this function and it is being calling literally a billion times
 HT_entry *get_entry(Hash_table hash_table, const uint8_t *key);
-inline int exists_key(Hash_table hash_table, const uint8_t *key) {
+static inline int exists_key(Hash_table hash_table, const uint8_t *key) {
 	return get_entry(hash_table, key) != NULL;
 }
 
