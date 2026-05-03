@@ -1,5 +1,7 @@
+MAX_TARGET_DEPTH = 7
+
 all:
-	gcc -O3 alg_finder.c hash_table.c queue.c -lm -o alg_finder
+	gcc -O3 -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) alg_finder.c hash_table.c queue.c -lm -o alg_finder
 
 run: all
 	./alg_finder test.in

@@ -1,24 +1,25 @@
-from cube import Cube, CubeColors, RawRotations, decompose_rotation_num, compose_rotation_num
-from cube_state import get_state, mask_state, state_to_str
-from data import CUBE_ROTATIONS_MIDDLE_PERMUTATIONS, FACE_COUNT, LETTER_TO_FACE_NUM, ADJ_FACES_LIST, PAIRS, PAIR_COUNT, SOLVED_STATE, STATE_SIZE
+from cube import Cube, CubeColors, RawRotations, decompose_rotation_num, compose_rotation_num, rotations_raw_to_str, rotations_str_to_raw
+from cube_state import get_state, mask_state, state_to_str, get_cube_colors_from_state
+from data import CUBE_ROTATIONS, FACE_COUNT, LETTER_TO_FACE_NUM, ADJ_FACES_LIST, PAIRS, PAIR_COUNT, SOLVED_STATE, STATE_SIZE
 from algs import ALGS
 
 from os import unlink, system
 
 
-
 CUBE_ROTATIONS_SEQUENCES = ("", "x", "xx", "xxx", "z", "zzz")
 PAIRS_OF_PAIRS = ((0, 1), (1, 2), (2, 3), (3, 0), (0, 2), (1, 3))
 CROSS_MASK = 0b1011010
-PAIRS_MASKS = (0b0001_1000_0000, 0b0010_0010_0000, 0b0100_0000_0001, 0b1000_0000_0100)
+PAIRS_MASKS = (0b0001_0000_0001, 0b0010_0000_0100, 0b0100_1000_0000, 0b1000_0010_0000)
 
 STATES_FILE_PATH = "/tmp/states.in"
 ALGS_FILE_PATH = "/tmp/algs.out"
 
 
+# FIXME: when rotating the cube, it also need to switch the colors
+# you can create a special function in the cube class, and remove cube rotations as normal movemnts
 def gen_cube_orientations(cube: Cube) -> tuple[Cube, ...]:
     scrambled_cubes = []
-    for cube_rotations in CUBE_ROTATIONS_SEQUENCES:
+    for cube_rotations in CUBE_ROTATIONS_SEQUENCES[:1]:  #FIXME:
         new_cube = cube.copy()
         new_cube.perform_rotations(cube_rotations)
         scrambled_cubes.append(new_cube)
@@ -26,16 +27,16 @@ def gen_cube_orientations(cube: Cube) -> tuple[Cube, ...]:
     return tuple(scrambled_cubes)
 
 
-# NOTE: Can be optimzed to only call alg_finder 2 times instead of 6
 def solve_crosses(cubes: tuple[Cube, ...]) -> tuple[tuple[RawRotations, ...]]:
     solutions = [[]] * len(cubes)
 
-    for pair_of_pairs in PAIRS_OF_PAIRS[:1]:
+    for pair_of_pairs in PAIRS_OF_PAIRS:
         mask = CROSS_MASK | PAIRS_MASKS[pair_of_pairs[0]] | PAIRS_MASKS[pair_of_pairs[1]]
 
         target_state = mask_state(SOLVED_STATE, mask)
         initial_states = [mask_state(get_state(cube), mask) for cube in cubes]
-
+        # for i in initial_states:
+        #     print(Cube(get_cube_colors_from_state(i)))
 
         with open(STATES_FILE_PATH, "w") as states_file:
             states_file.write(str(STATE_SIZE) + "\n")
@@ -51,7 +52,8 @@ def solve_crosses(cubes: tuple[Cube, ...]) -> tuple[tuple[RawRotations, ...]]:
                 state_unprocessed, alg_unprocessed = line.split(" : ")
                 state = tuple(map(int, state_unprocessed.split(" ")))
                 # could be fixed, but this is more robust
-                alg = alg_unprocessed[alg_unprocessed.find("\"") + 1:alg_unprocessed.rfind("\"")]
+                alg_str = alg_unprocessed[alg_unprocessed.find("\"") + 1:alg_unprocessed.rfind("\"")]
+                alg = rotations_str_to_raw(alg_str)
 
                 cube_num = initial_states.index(state)
                 solutions[cube_num].append(alg)
@@ -65,13 +67,38 @@ def solve_crosses(cubes: tuple[Cube, ...]) -> tuple[tuple[RawRotations, ...]]:
 def solve_f2l_and_1lll(cube: Cube) -> tuple[RawRotations, ...]:
     solutions = []
 
-    # for pair_idx in unsolved_pairs:
+    state = get_state(cube)
+    unsolved_pairs = []
+    solved_pieces_mask = CROSS_MASK
+    for pair_idx in range(PAIR_COUNT):
+        is_pair_solved = True
 
-        # get mask
-        # get state
-        # mask state
+        for i in range(2):
+            if PAIRS[pair_idx][i][1] != state[PAIRS[pair_idx][i][0]]:
+                is_pair_solved = False
+                break
 
-        # solve
+        if is_pair_solved:
+            solved_pieces_mask |= PAIRS_MASKS[pair_idx]
+        else:
+            unsolved_pairs.append(pair_idx)
+
+    # do 1LLL
+    if len(unsolved_pairs) == 0:
+        solutions.append(ALGS[state])
+        return tuple(solutions)
+
+    # solve each f2l pair
+    for unsolved_pair in unsolved_pairs:
+        masked_state = mask_state(state, solved_pieces_mask | PAIRS_MASKS[unsolved_pair])
+        solve_pair_alg = ALGS[masked_state]
+
+        # a new cube with the current unsolved pair solved
+        solved_pair_cube = cube.copy()
+        solved_pair_cube.perform_raw_rotations(solve_pair_alg)
+
+        # it is recursive, in this way it tries every possible sequence for f2l/1lll, so you can choose the shortest one
+        solutions += [solve_pair_alg + solution for solution in solve_f2l_and_1lll(solved_pair_cube)]
 
     return tuple(solutions)
 
@@ -103,7 +130,7 @@ def normalize_rotation_sequence(cube_rotations: str, unnormalized_rotation_seque
     return tuple(normalized_rotation_sequence)
 
 
-# TODO: domingos
+# TODO: domingos, too late!!!
 def optmize_rotation_sequence(rotation_sequence: RawRotations) -> RawRotations:
     return rotation_sequence
 
@@ -116,17 +143,23 @@ def solve_cube(scrambled_cube_colors: CubeColors) -> RawRotations:
     # multiple algs for a single cube
     cross_algs = solve_crosses(base_orientation_cubes)
 
+    # for i in range(1):
+    #     for cross_alg in cross_algs[i]:
+    #         print(rotations_raw_to_str(cross_alg))
+
     solutions = []
     for i in range(len(base_orientation_cubes)):
-        for cross_alg in cross_algs[i]:
-            cube = base_orientation_cubes[i]
-            cube.perform_raw_rotations(cross_alg)
+        for alg in cross_algs[i]:
+            cube = base_orientation_cubes[i].copy()
+            cube.perform_raw_rotations(alg)
 
-            unnormalized_solutions = [cross_alg + f2l_1lll_alg for f2l_1lll_alg in solve_f2l_and_1lll(cube)]
+            unnormalized_solutions = [alg + f2l_1lll_alg for f2l_1lll_alg in solve_f2l_and_1lll(cube)]
 
             solutions += [normalize_rotation_sequence(CUBE_ROTATIONS_SEQUENCES[i], solution) for solution in unnormalized_solutions]
 
     solutions = tuple(map(optmize_rotation_sequence, solutions))
+    # for alg in solutions:
+    #     print(rotations_raw_to_str(alg))
 
     shortest_solution_idx = 0
     for i in range(1, len(solutions)):
@@ -134,11 +167,3 @@ def solve_cube(scrambled_cube_colors: CubeColors) -> RawRotations:
             shortest_solution_idx = i
 
     return solutions[shortest_solution_idx]
-
-
-from random import randint
-from data import ROTATIONS_COUNT
-cube = Cube()
-scramble = tuple([randint(0, ROTATIONS_COUNT - 1) for _ in range(25)])
-cube.perform_raw_rotations(scramble)
-solve_cube(cube.colors)
