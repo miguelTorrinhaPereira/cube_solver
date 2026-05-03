@@ -1,4 +1,4 @@
-from data import CUBE_ROTATIONS, CUBE_ROTATIONS_MIDDLE_PERMUTATIONS, FACE_COUNT, CELLS_PER_FACE, DEFAULT_COLORS, FACE_COUNT, \
+from data import CUBE_ROTATIONS, CUBE_ROTATIONS_MIDDLE_PERMUTATIONS, FACE_COUNT, CELLS_PER_FACE, DEFAULT_COLORS, ROTATIONS_TYPE_COUNT, \
     ADJ_FACES_LIST, ADJ_FACES_SECTIONS_LIST, ROTATIONS, ROTATIONS_COUNT, ROTATIONS_PER_FACE, \
     SECTION_BEGINNING, SECTION_STEP, MIDDLE_CELLS, CORNER_CELLS, \
     COLOR_TO_TEXT_COLOR, CUBE_ROTATIONS, ROTATION_STR_TO_NUM
@@ -46,6 +46,14 @@ def decompose_rotation_num(rotation_num: int) -> tuple[int, int]:
 
 def compose_rotation_num(face_num: int, rotation_type: int) -> int:
     return face_num * ROTATIONS_PER_FACE + rotation_type
+
+
+def invert_raw_rotations(rotations: RawRotations) -> RawRotations:
+    inverted_rotations = []
+    for rotation_num in rotations[::-1]:
+        face_num, rotation_type = decompose_rotation_num(rotation_num)
+        inverted_rotations.append(compose_rotation_num(face_num, ROTATIONS_TYPE_COUNT - rotation_type))
+    return tuple(inverted_rotations)
 
 
 def decompose_sticker(sticker: int) -> tuple[int, int]:

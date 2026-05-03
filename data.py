@@ -15,6 +15,7 @@ GREY = FACE_COUNT  # this color is used when you don't want some piece to be inc
 ROTATIONS = ("L", "L2", "L'", "F", "F2", "F'", "R", "R2", "R'", "B", "B2", "B'", "U", "U2", "U'", "D", "D2", "D'")
 ROTATIONS_COUNT = len(ROTATIONS)
 ROTATIONS_PER_FACE = ROTATIONS_COUNT // FACE_COUNT
+ROTATIONS_TYPE_COUNT = (ROTATIONS_COUNT // FACE_COUNT - 1)
 CUBE_ROTATIONS = ("x", "y", "z")
 
 ROTATION_STR_TO_NUM = {"L": 0, "L2": 1, "L'": 2, "F": 3, "F2": 4, "F'": 5, "R": 6, "R2": 7, "R'": 8, "B": 9, "B2": 10,
@@ -168,5 +169,5 @@ RED_GREEN_PAIR = ((7, 26), (10, 23))
 GREEN_ORANGE_PAIR = ((5, 6), (11, 3))
 ORANGE_BLUE_PAIR = ((0, 8), (8, 5))
 
-PAIRS = (BLUE_RED_PAIR, RED_GREEN_PAIR, GREEN_ORANGE_PAIR, ORANGE_BLUE_PAIR)
+PAIRS = (ORANGE_BLUE_PAIR, BLUE_RED_PAIR, RED_GREEN_PAIR, GREEN_ORANGE_PAIR)
 PAIR_COUNT = len(PAIRS)
