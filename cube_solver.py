@@ -1,6 +1,6 @@
 from cube import Cube, CubeColors, RawRotations, decompose_rotation_num, compose_rotation_num, rotations_raw_to_str, rotations_str_to_raw
 from cube_state import get_state, mask_state, state_to_str, get_cube_colors_from_state
-from data import CUBE_ROTATIONS, FACE_COUNT, LETTER_TO_FACE_NUM, ADJ_FACES_LIST, PAIRS, PAIR_COUNT, SOLVED_STATE, STATE_SIZE
+from data import FACE_COUNT, LETTER_TO_FACE_NUM, ADJ_FACES_LIST, PAIRS, PAIR_COUNT, SOLVED_STATE, STATE_SIZE, OPOSITE_FACE
 from algs import ALGS
 
 from os import unlink, system
@@ -130,9 +130,41 @@ def normalize_rotation_sequence(cube_rotations: str, unnormalized_rotation_seque
     return tuple(normalized_rotation_sequence)
 
 
-# TODO: domingos, too late!!!
-def optmize_rotation_sequence(rotation_sequence: RawRotations) -> RawRotations:
-    return rotation_sequence
+# saves on average 0.8 moves
+def optmize_rotation_sequence(rotations: RawRotations) -> RawRotations:
+    decomposed_rotations = [decompose_rotation_num(rotation_num) for rotation_num in rotations]
+
+    curr_rotation = 0
+    while curr_rotation < len(decomposed_rotations) - 1:
+        face_num = decomposed_rotations[curr_rotation][0]
+        oposite_face_num = OPOSITE_FACE[face_num]
+        # R = 0, R2 = 1, R' = 2               rotation type
+        #            ↓
+        # ID = 0, R = 1, R2 = 2, R' = 3       rotation "value"
+        # this will be taken mod 4 and subed 1 to get the final rotation type
+        rotation_value = decomposed_rotations[curr_rotation][1] + 1
+
+        next_rotation = curr_rotation + 1
+        while next_rotation < len(decomposed_rotations):
+            if decomposed_rotations[next_rotation][0] == face_num:
+                rotation_value += decomposed_rotations[next_rotation][1] + 1
+                del decomposed_rotations[next_rotation]
+            elif decomposed_rotations[next_rotation][0] == oposite_face_num:  # they don't interfier with the rotations of the current face
+                next_rotation += 1
+            else:
+                break
+
+        # 4 is the number of states a face can be in terms of rotation
+        final_rotation_value = rotation_value % 4
+        if final_rotation_value == 0:  # remove the rotation
+            del decomposed_rotations[curr_rotation]
+        else:
+            final_rotation_type = final_rotation_value - 1
+            decomposed_rotations[curr_rotation] = (decomposed_rotations[curr_rotation][0], final_rotation_type)  # it's a tupple, read only
+            curr_rotation += 1
+
+
+    return tuple([compose_rotation_num(face_num, rotations_type) for face_num, rotations_type in decomposed_rotations])
 
 
 def solve_cube(scrambled_cube_colors: CubeColors) -> RawRotations:
@@ -157,7 +189,7 @@ def solve_cube(scrambled_cube_colors: CubeColors) -> RawRotations:
 
             solutions += [normalize_rotation_sequence(CUBE_ROTATIONS_SEQUENCES[i], solution) for solution in unnormalized_solutions]
 
-    solutions = tuple(map(optmize_rotation_sequence, solutions))
+    # solutions = tuple(map(optmize_rotation_sequence, solutions))
     # for alg in solutions:
     #     print(rotations_raw_to_str(alg))
 

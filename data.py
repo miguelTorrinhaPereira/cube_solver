@@ -21,7 +21,6 @@ CUBE_ROTATIONS = ("x", "y", "z")
 ROTATION_STR_TO_NUM = {"L": 0, "L2": 1, "L'": 2, "F": 3, "F2": 4, "F'": 5, "R": 6, "R2": 7, "R'": 8, "B": 9, "B2": 10,
                        "B'": 11, "U": 12, "U2": 13, "U'": 14, "D": 15, "D2": 16, "D'": 17, "x": 18, "y": 19, "z": 20}
 
-LETTER_TO_FACE_NUM = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
 #   U
 # L F R B
 #   D
@@ -30,6 +29,10 @@ LETTER_TO_FACE_NUM = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
 # 0 1 2 3
 #   5
 #
+LETTER_TO_FACE_NUM = {"L": 0, "F": 1, "R": 2, "B": 3, "U": 4, "D": 5}
+
+OPOSITE_FACE =  (2, 3, 0, 1, 5, 4)
+
 # the adjacent faces are listed counter clockwise
 ADJ_FACES_LIST = (
     (1, 4, 3, 5),
