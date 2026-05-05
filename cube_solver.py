@@ -15,6 +15,7 @@ PAIRS_MASKS = (0b0001_0000_0001, 0b0010_0000_0100, 0b0100_1000_0000, 0b1000_0010
 
 STATES_FILE_PATH = "/tmp/states.in"
 ALGS_FILE_PATH = "/tmp/algs.out"
+ALG_FINDER_PATH = "bin/alg_finder"
 
 
 # saves 2.6 moves on average
@@ -44,7 +45,7 @@ def solve_crosses(cubes: tuple[Cube, ...]) -> tuple[tuple[RawRotations, ...]]:
             for initial_state in initial_states:
                 states_file.write(state_to_str(initial_state) + "\n")
 
-        system(f"alg_finder/alg_finder {STATES_FILE_PATH} > {ALGS_FILE_PATH}")
+        system(f"{ALG_FINDER_PATH} {STATES_FILE_PATH} > {ALGS_FILE_PATH}")
 
         with open(ALGS_FILE_PATH, "r") as algs_file:
             for line in algs_file.readlines():
