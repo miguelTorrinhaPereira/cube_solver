@@ -1,8 +1,7 @@
 //FIXME: something is wrong with stop mid solve
 //FIXME: segfault with MAX_TARGET_DEPTH = 1
-//TODO: try to join big_ht in to the little_ht array, maybe it doesn't hurt performance
-//TODO: optimize to only use the true state size, but the hash still uses the full state size USED_STATE_SIZE, could help in f2l
 //TODO: SIMD the shitt out of the search function last level step, will need get_entry2 that already receives the hash, previous state and move
+//  _mm512_xor_epi32, _mm_mask_mullo_epi32, _mm512_sll_epi32
 //TODO: try linear probing hash table, should be faster for reads, UINT32_MAX in value for unused spaces, mutexes for sync, may be slower to construct, but it doesn't really matter
 //TODO: huge pages, 1GB
 //TODO: test weakening the hash function
