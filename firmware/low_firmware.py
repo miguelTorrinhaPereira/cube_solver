@@ -1,4 +1,4 @@
-MOVES = ( 
+LOW_LEVEL_MOVES = ( 
     "L", "L'", "L2", "LO", "LC",  # garra da esquerda
     "R", "R'", "R2", "RO", "RC",  # garra da direita
     "D", "D'", "D2", "DO", "DC",  # garra de baixo
