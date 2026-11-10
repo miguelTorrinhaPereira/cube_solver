@@ -2,4 +2,4 @@ __pycache__/
 a.out
 test*
 gmon.out
-alg_finder
+bin/
