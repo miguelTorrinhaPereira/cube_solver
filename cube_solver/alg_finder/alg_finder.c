@@ -1,12 +1,10 @@
 //FIXME: something is wrong with stop mid solve
-//FIXME: segfault with MAX_TARGET_DEPTH = 1
 //TODO: SIMD the shitt out of the search function last level step, will need get_entry2 that already receives the hash, previous state and move
 //  _mm512_xor_epi32, _mm_mask_mullo_epi32, _mm512_sll_epi32
 //TODO: try linear probing hash table, should be faster for reads, UINT32_MAX in value for unused spaces, mutexes for sync, may be slower to construct, but it doesn't really matter
 //TODO: huge pages, 1GB
 //TODO: test weakening the hash function
 //TODO: make the formula for ht size better, 18 * 13.35 ^ (d - 1) * oversupply, maybe calculate the max depth based on available memory dynamicaly (maybe not)
-//TODO: check if hyperthreading makes a diference, the rasberry pi doesn't have hyperthreading
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -138,6 +136,26 @@ bool solve_case_check_hts(const uint8_t initial_state[STATE_SIZE], uint32_t *tar
 }
 
 
+bool expand_state(uint8_t *state_p, uint8_t depth_rotation[], uint32_t curr_depth) {
+	uint8_t *end = state_p + STATE_SIZE;
+	uint8_t *next_state_p = end;
+
+	if(curr_depth > 0 && depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
+		depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
+		return false;
+	}
+
+	while(state_p < end)
+		*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
+
+	if(exists_key(big_state_ht, end)) {
+		return true;
+	}
+
+	return false;
+}
+
+
 // searches for solutions longer than MAX_TARGET_DEPTH.
 // All such cases naturally have a state in the big_state_ht,
 bool solve_case_search(const uint8_t initial_state[STATE_SIZE], uint32_t max_initial_depth, uint64_t *initial_state_encoding, uint32_t *target_state_encoding) {
@@ -163,46 +181,26 @@ bool solve_case_search(const uint8_t initial_state[STATE_SIZE], uint32_t max_ini
 			continue;
 		}
 
-		uint8_t *end = state_p + STATE_SIZE;
-		uint8_t *next_state_p = end;
 		if(curr_depth < max_initial_depth - 1) {
-			if(curr_depth > 0 && depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
-				depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
-				continue;
-			}
-
-			while(state_p < end)
-				*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
-
-			if(exists_key(big_state_ht, end)) {
+			if (expand_state(state_p, depth_rotation, curr_depth)) {
 				*initial_state_encoding = calc_state_encoding(depth_rotation, curr_depth + 1);
-				*target_state_encoding = get_value(big_state_ht, end);
+				*target_state_encoding = get_value(big_state_ht, state_p + STATE_SIZE);
 				return true;
 			}
 
 			depth_rotation[curr_depth + 1] = 0;
 			curr_depth++;
+			state_p += STATE_SIZE;
 		}
 		else {
 			while(depth_rotation[curr_depth] < ROTATIONS_COUNT) {
-				if(curr_depth > 0 && depth_rotation[curr_depth - 1] / 3 == depth_rotation[curr_depth] / 3) {
-					depth_rotation[curr_depth] = 3 * (depth_rotation[curr_depth - 1] / 3 + 1);
-					continue;
-				}
-
-				while(state_p < end)
-					*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
-
-				if(exists_key(big_state_ht, end)) {
+				if (expand_state(state_p, depth_rotation, curr_depth)) {
 					*initial_state_encoding = calc_state_encoding(depth_rotation, curr_depth + 1);
-					*target_state_encoding = get_value(big_state_ht, end);
+					*target_state_encoding = get_value(big_state_ht, state_p + STATE_SIZE);
 					return true;
 				}
 
 				depth_rotation[curr_depth]++;
-
-				state_p -= STATE_SIZE;
-				next_state_p = end;
 			}
 		}
 	}
