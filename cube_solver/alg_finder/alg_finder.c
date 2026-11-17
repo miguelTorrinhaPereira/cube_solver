@@ -148,11 +148,7 @@ bool expand_state(uint8_t *state_p, uint8_t depth_rotation[], uint32_t curr_dept
 	while(state_p < end)
 		*next_state_p++ = turn_outcome[depth_rotation[curr_depth]][*state_p++];
 
-	if(exists_key(big_state_ht, end)) {
-		return true;
-	}
-
-	return false;
+	return exists_key(big_state_ht, end);
 }
 
 
