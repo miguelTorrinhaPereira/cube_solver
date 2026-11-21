@@ -140,19 +140,18 @@ bool solve_case_check_hts(const uint8_t initial_state[STATE_SIZE], uint32_t *tar
 }
 
 
-inline void expand_state(const uint8_t *state_orig, uint8_t states[POSSIBLE_ROTATIONS + 1][STATE_SIZE], uint8_t previous_face) {
+void expand_state(const uint8_t *state_orig, uint8_t states[POSSIBLE_ROTATIONS + 1][STATE_SIZE], uint8_t previous_face) {
 	const uint8_t (*turn_outcome)[POSSIBLE_ROTATIONS + 1] = turn_outcome_tables_8[previous_face];
-	uint8_t *state_p = &states[0][0];
 
-	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS + 1; rotation++) {
-		for (int piece = 0; piece < STATE_SIZE; piece++) {
+	//TODO: AVX
+	uint8_t *state_p = &states[0][0];
+	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS + 1; rotation++)
+		for (int piece = 0; piece < STATE_SIZE; piece++)
 			*(state_p++) = turn_outcome[state_orig[piece]][rotation];
-		}
-	}
 }
 
 
-inline void write_faces(uint8_t faces[FACE_COUNT - 1], uint8_t previous_face) {
+void write_faces(uint8_t faces[FACE_COUNT - 1], uint8_t previous_face) {
 	uint8_t face = 0;
 	while(face < FACE_COUNT) {
 		if (face == previous_face)
@@ -457,11 +456,15 @@ int main(int argc, char *argv[]) {
 	int scanf_status __attribute__((unused));  // used to suppress the compiler warnings about unused values of scanf
 	uint32_t input_state_size;  // the user may omit some pieces of the input state if they aren't relevant
 	scanf_status = fscanf(input_file, "%u", &input_state_size);
+	if (scanf_status != 1)
+		return 1;
 
 	// read target state
 	memset(target_state, ORANGE_CENTER_LABEL, STATE_SIZE);  // unused pieces will remain the orange center label
 	for(int i = 0; i < input_state_size; i++) {
 		scanf_status = fscanf(input_file, "%d", &new_num);
+		if (scanf_status != 1)
+			return 1;
 		target_state[i] = (new_num != -1) ? new_num : ORANGE_CENTER_LABEL;
 	}
 
