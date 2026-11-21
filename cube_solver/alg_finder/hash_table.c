@@ -4,6 +4,7 @@
 #include <stdatomic.h>
 
 #include "hash_table.h"
+#include "turn_data.h"
 
 
 // hash function constants
@@ -23,7 +24,6 @@
 #define RESIZING_FACTOR 2
 
 
-
 /**
 	@brief Calculates the hash of a string (a key).
 
@@ -32,7 +32,7 @@
 
 	@return the hash of the string.
 */
-static uint32_t hash_function(const uint8_t *key) {
+uint32_t hash_function(const uint8_t *key) {
 	uint32_t h = HASH_SEED;
 
 	const uint8_t *end = key + STATE_SIZE;
@@ -380,6 +380,41 @@ HT_entry *next_entry(Hash_table hash_table, HT_entry *entry) {
 			return hash_table->table[index];
 
 	return NULL;
+}
+
+
+uint32_t exists_key_multiple(Hash_table hash_table, const uint8_t *state_orig, uint8_t keys[POSSIBLE_ROTATIONS][STATE_SIZE], uint8_t previous_face) {
+	uint32_t hashes[POSSIBLE_ROTATIONS + 1];
+	HT_entry *entrys_p[POSSIBLE_ROTATIONS + 1];
+	const uint32_t (*turn_outcome)[POSSIBLE_ROTATIONS + 1] = turn_outcome_tables_32[previous_face];
+
+	//
+	const uint8_t (*turn_outcome_8)[POSSIBLE_ROTATIONS + 1] = turn_outcome_tables_8[previous_face];
+	uint8_t *key_p = &keys[0][0];
+	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS; rotation++) {
+		for (int piece = 0; piece < STATE_SIZE; piece++) {
+			*(key_p++) = turn_outcome[state_orig[piece]][rotation];
+		}
+	}
+	//
+
+	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS; rotation++) {
+		uint32_t hash = hash_function(keys[rotation]);
+		hashes[rotation] = hash;
+	}
+	//
+
+	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS; rotation++) {
+		uint32_t hash = hashes[rotation];
+		uint32_t index = get_index(hash, hash_table->capacity);
+		HT_entry *entry = hash_table->table[index];
+
+		for (; entry != NULL; entry = entry->next)
+			if (hash == entry->hash && keys_equal(keys[rotation], entry->key))
+				return rotation;
+	}
+
+	return UINT8_MAX;
 }
 
 

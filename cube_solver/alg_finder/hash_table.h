@@ -56,7 +56,7 @@ int remove_by_key(Hash_table hash_table, const uint8_t *key, Deletion_mode mode)
 uint32_t get_value(Hash_table hash_table, const uint8_t *key);
 int change_entry(Hash_table hash_table, const uint8_t *key, uint32_t new_value);
 
-// should be statis, but exists_key is basically a wrapper to this function and it is being calling literally a billion times
+// should be static, but exists_key is basically a wrapper to this function and it is being called literally a billion times
 HT_entry *get_entry(Hash_table hash_table, const uint8_t *key);
 static inline int exists_key(Hash_table hash_table, const uint8_t *key) {
 	return get_entry(hash_table, key) != NULL;
@@ -67,4 +67,6 @@ HT_entry *first_entry(Hash_table hash_table);
 
 uint32_t get_hash_table_count(Hash_table hash_table);
 uint32_t get_hash_table_capacity(Hash_table hash_table);
+
+uint32_t exists_key_multiple(Hash_table hash_table, const uint8_t *state_orig, uint8_t keys[][STATE_SIZE], uint8_t previous_face);
 #endif
