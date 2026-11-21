@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdatomic.h>
+#include <immintrin.h>
 
 #include "hash_table.h"
 #include "turn_data.h"
@@ -11,7 +12,6 @@
 #define HASH_SEED 0x9747b28c
 #define HASH_MULT_FACTOR 0x5bd1e995
 #define HASH_SHIFT_FACTOR 15
-
 
 /**
 	Biggest power of two that fits into a uint32_t int.
@@ -384,26 +384,23 @@ HT_entry *next_entry(Hash_table hash_table, HT_entry *entry) {
 
 
 uint32_t exists_key_multiple(Hash_table hash_table, const uint8_t *state_orig, uint8_t keys[POSSIBLE_ROTATIONS][STATE_SIZE], uint8_t previous_face) {
-	uint32_t hashes[POSSIBLE_ROTATIONS + 1];
-	HT_entry *entrys_p[POSSIBLE_ROTATIONS + 1];
+	_Alignas(8) uint32_t hashes[POSSIBLE_ROTATIONS + 1];
 	const uint32_t (*turn_outcome)[POSSIBLE_ROTATIONS + 1] = turn_outcome_tables_32[previous_face];
+	const __m512i hash_seed_v = _mm512_set1_epi32(HASH_SEED);
+	const __m512i hash_mult_factor_v = _mm512_set1_epi32(HASH_MULT_FACTOR);
+	const __m512i hash_shift_factor_v = _mm512_set1_epi32(HASH_SHIFT_FACTOR);
 
-	//
-	const uint8_t (*turn_outcome_8)[POSSIBLE_ROTATIONS + 1] = turn_outcome_tables_8[previous_face];
-	uint8_t *key_p = &keys[0][0];
-	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS; rotation++) {
-		for (int piece = 0; piece < STATE_SIZE; piece++) {
-			*(key_p++) = turn_outcome[state_orig[piece]][rotation];
-		}
+	__m512i hashes_v = hash_seed_v;
+
+	const uint8_t *end = state_orig + STATE_SIZE;
+	for (; state_orig < end; state_orig++) {
+		__m512i new_pos_v = _mm512_load_epi32 (turn_outcome[*state_orig]);
+		hashes_v = _mm512_xor_epi32 (hashes_v, new_pos_v);
+		hashes_v = _mm512_mullo_epi32(hashes_v, hash_mult_factor_v);
+		hashes_v = _mm512_xor_epi32 (hashes_v, _mm512_srlv_epi32(hashes_v, hash_shift_factor_v));
 	}
-	//
-
-	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS; rotation++) {
-		uint32_t hash = hash_function(keys[rotation]);
-		hashes[rotation] = hash;
-	}
-	//
-
+	
+	_mm512_storeu_epi32 (hashes, hashes_v);
 	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS; rotation++) {
 		uint32_t hash = hashes[rotation];
 		uint32_t index = get_index(hash, hash_table->capacity);

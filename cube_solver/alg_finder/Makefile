@@ -2,9 +2,10 @@ MAX_TARGET_DEPTH = 7
 BIN_DIR = ../bin
 BIN_NAME = alg_finder
 FILES = alg_finder.c hash_table.c queue.c turn_data.c
+CCFLAGS = -lm -mavx512f -mavx512bw -mavx512vl
 
 all: $(FILES) | $(BIN_DIR)
-	gcc -O3  -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) -lm -o $(BIN_DIR)/$(BIN_NAME)
+	gcc -O3 -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) $(CCFLAGS)  -o $(BIN_DIR)/$(BIN_NAME)
 
 run: all
 	$(BIN_DIR)/$(BIN_NAME) test.in
@@ -13,10 +14,10 @@ time: all
 	/bin/time -v $(BIN_DIR)/$(BIN_NAME) test.in
 
 debug:
-	gcc -O0 -g -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) -lm -o $(BIN_DIR)/$(BIN_NAME)
+	gcc -O0  -g -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) $(CCFLAGS) -o $(BIN_DIR)/$(BIN_NAME)
 
 profile: | $(BIN_DIR)
-	gcc -O3 -pg DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) -lm -o $(BIN_DIR)/$(BIN_NAME)
+	gcc -O3 -pg DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) $(CCFLAGS) -o $(BIN_DIR)/$(BIN_NAME)
 	./alg_finder test.in
 	gprof alg_finder | batcat
 

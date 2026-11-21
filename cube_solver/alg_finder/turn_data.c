@@ -2,7 +2,7 @@
 
 const char *const rotation_str[ROTATIONS_COUNT] = {"L", "L2", "L'", "F", "F2", "F'", "R", "R2", "R'", "B", "B2", "B'", "U", "U2", "U'", "D", "D2", "D'"};
 
-#define TURN_OUTCOME_TABLE(uint_size) const uint##uint_size##_t turn_outcome_tables_##uint_size [FACE_COUNT][POSITION_COUNT][POSSIBLE_ROTATIONS + 1] = { \
+#define TURN_OUTCOME_TABLE(uint_size) _Alignas(8) const uint##uint_size##_t turn_outcome_tables_##uint_size [FACE_COUNT][POSITION_COUNT][POSSIBLE_ROTATIONS + 1] = { \
 	{ /* 0, L */ \
 		{0, 0, 0, 0, 0, 0, 51, 26, 38, 27, 18, 9, 0, 0, 0, 0}, \
 		{1, 1, 1, 1, 1, 1, 1, 1, 1, 28, 19, 10, 1, 1, 1, 0}, \
@@ -344,7 +344,7 @@ const char *const rotation_str[ROTATIONS_COUNT] = {"L", "L2", "L'", "F", "F2", "
 TURN_OUTCOME_TABLE(8);
 TURN_OUTCOME_TABLE(32);
 
-const uint8_t turn_outcome_complete[ROTATIONS_COUNT][POSITION_COUNT] = {
+_Alignas(8) const uint8_t turn_outcome_complete[ROTATIONS_COUNT][POSITION_COUNT] = {
 	{2, 5, 8, 1, 4, 7, 0, 3, 6, 45, 10, 11, 48, 13, 14, 51, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 42, 30, 31, 39, 33, 34, 36, 9, 37, 38, 12, 40, 41, 15, 43, 44, 35, 46, 47, 32, 49, 50, 29, 52, 53},
 	{8, 7, 6, 5, 4, 3, 2, 1, 0, 35, 10, 11, 32, 13, 14, 29, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 15, 30, 31, 12, 33, 34, 9, 45, 37, 38, 48, 40, 41, 51, 43, 44, 36, 46, 47, 39, 49, 50, 42, 52, 53},
 	{6, 3, 0, 7, 4, 1, 8, 5, 2, 36, 10, 11, 39, 13, 14, 42, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 51, 30, 31, 48, 33, 34, 45, 35, 37, 38, 32, 40, 41, 29, 43, 44, 9, 46, 47, 12, 49, 50, 15, 52, 53},
