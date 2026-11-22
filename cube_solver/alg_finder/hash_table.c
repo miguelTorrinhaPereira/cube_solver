@@ -32,7 +32,7 @@
 
 	@return the hash of the string.
 */
-uint32_t hash_function(const uint8_t *key) {
+static inline uint32_t hash_function(const uint8_t *key) {
 	uint32_t h = HASH_SEED;
 
 	const uint8_t *end = key + STATE_SIZE;

@@ -2,7 +2,7 @@ MAX_TARGET_DEPTH = 7
 BIN_DIR = ../bin
 BIN_NAME = alg_finder
 FILES = alg_finder.c hash_table.c queue.c turn_data.c
-CCFLAGS = -lm -mavx512f -mavx512bw -mavx512vl
+CCFLAGS = -march=native -lm -mavx512f -mavx512bw -mavx512vl
 TEST_FILE = ../test.in
 
 all: $(FILES) | $(BIN_DIR)
