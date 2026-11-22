@@ -56,8 +56,7 @@ uint32_t thread_count = 0;
 pthread_t *pthread_tids;
 
 // one hash table per depth including depth 0
-// big_state_ht is separate for performance reasons, it avoid and indirect reference
-Hash_table little_state_hts[MAX_TARGET_DEPTH], big_state_ht;
+Hash_table state_hts[MAX_TARGET_DEPTH + 1];
 
 // shallow target states are the states of depth 1 from the target state
 Queue unsolved_cases_queue, solved_cases_queue, shallow_target_states_queue;
@@ -150,16 +149,11 @@ void get_alg_from_state_encoding(uint64_t initial_state_encoding, uint32_t targe
 
 // just checks if the initial case is in the target hts
 bool solve_case_check_hts(const uint8_t initial_state[STATE_SIZE], uint32_t *target_state_encoding) {
-	for(int i = 0; i < MAX_TARGET_DEPTH; i++) {
-		if(exists_key(little_state_hts[i], initial_state)) {
-			*target_state_encoding = get_value(little_state_hts[i], initial_state);
+	for(int i = 0; i < MAX_TARGET_DEPTH + 1; i++) {
+		if(exists_key(state_hts[i], initial_state)) {
+			*target_state_encoding = get_value(state_hts[i], initial_state);
 			return true;
 		}
-	}
-
-	if(exists_key(big_state_ht, initial_state)) {
-		*target_state_encoding = get_value(big_state_ht, initial_state);
-		return true;
 	}
 
 	return false;
@@ -236,7 +230,7 @@ static inline void write_previous_faces(uint8_t faces[FACE_COUNT - 1], uint8_t p
 
 
 // searches for solutions longer than MAX_TARGET_DEPTH.
-// All such cases naturally have a state in the big_state_ht,
+// All such cases naturally have a state in the last ht
 bool solve_case_search(const uint8_t initial_state[STATE_SIZE], const uint32_t max_initial_depth, uint64_t *initial_state_encoding, uint32_t *target_state_encoding) {
 	if(max_initial_depth == 0)  // edge case
 		return false;
@@ -251,9 +245,9 @@ bool solve_case_search(const uint8_t initial_state[STATE_SIZE], const uint32_t m
 	// check depth1
 	if (unlikely(max_initial_depth == 1)) {
 		for (uint8_t rotation = 0; rotation < ROTATIONS_COUNT; rotation++) {
-			if (exists_key(big_state_ht, depth1_states[rotation])) {
+			if (exists_key(state_hts[MAX_TARGET_DEPTH], depth1_states[rotation])) {
 				*initial_state_encoding = calc_state_encoding(&rotation, max_initial_depth);
-				*target_state_encoding = get_value(big_state_ht, depth1_states[rotation]);
+				*target_state_encoding = get_value(state_hts[MAX_TARGET_DEPTH], depth1_states[rotation]);
 				return true;
 			}
 		}
@@ -279,7 +273,7 @@ bool solve_case_search(const uint8_t initial_state[STATE_SIZE], const uint32_t m
 				expand_state(depth1_states[depth1_state_idx], states[0], previous_face);
 
 				if (unlikely(max_initial_depth == 2)) {
-					state_idxs[0] = exists_key_multiple(big_state_ht, depth1_states[depth1_state_idx], states[0], previous_face);
+					state_idxs[0] = exists_key_multiple(state_hts[MAX_TARGET_DEPTH], depth1_states[depth1_state_idx], states[0], previous_face);
 					if (unlikely(state_idxs[0] != UINT8_MAX)) {
 						uint8_t rotations[max_initial_depth];
 						rotations[0] = depth1_state_idx;
@@ -287,7 +281,7 @@ bool solve_case_search(const uint8_t initial_state[STATE_SIZE], const uint32_t m
 						rotations[1] = 3 * previous_faces[0][state_idx / ROTATIONS_PER_FACE] + state_idx % ROTATIONS_PER_FACE;
 
 						*initial_state_encoding = calc_state_encoding(rotations, max_initial_depth);
-						*target_state_encoding = get_value(big_state_ht, states[0][state_idx]);
+						*target_state_encoding = get_value(state_hts[MAX_TARGET_DEPTH], states[0][state_idx]);
 						return true;
 					}
 
@@ -310,7 +304,7 @@ bool solve_case_search(const uint8_t initial_state[STATE_SIZE], const uint32_t m
 		expand_state(states[curr_depth][state_idx], states[curr_depth + 1], previous_face);
 
 		if (likely(curr_depth == max_initial_depth - 3)) {
-			state_idxs[curr_depth + 1] = exists_key_multiple(big_state_ht, states[curr_depth][state_idx], states[curr_depth + 1], previous_face);
+			state_idxs[curr_depth + 1] = exists_key_multiple(state_hts[MAX_TARGET_DEPTH], states[curr_depth][state_idx], states[curr_depth + 1], previous_face);
 			if (unlikely(state_idxs[curr_depth + 1] != UINT8_MAX)) {
 				write_previous_faces(previous_faces[curr_depth + 1], previous_face);
 
@@ -322,7 +316,7 @@ bool solve_case_search(const uint8_t initial_state[STATE_SIZE], const uint32_t m
 				}
 
 				*initial_state_encoding = calc_state_encoding(rotations, max_initial_depth);
-				*target_state_encoding = get_value(big_state_ht, states[curr_depth + 1][state_idx]);
+				*target_state_encoding = get_value(state_hts[MAX_TARGET_DEPTH], states[curr_depth + 1][state_idx]);
 				return true;
 			}
 
@@ -346,7 +340,7 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 	uint8_t depth1_rotation = shallow_state->info;
 
 	// the value will always fit in 32 bits if the maximum search distance is 7
-	insert_ht(little_state_hts[1], depth1_state, (uint32_t)calc_state_encoding(&depth1_rotation, 1));
+	insert_ht(state_hts[1], depth1_state, (uint32_t)calc_state_encoding(&depth1_rotation, 1));
 
 	uint8_t states[MAX_TARGET_DEPTH - 1][POSSIBLE_ROTATIONS][STATE_SIZE];
 	uint8_t previous_faces[MAX_TARGET_DEPTH - 1][FACE_COUNT - 1];
@@ -362,7 +356,7 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 	expand_state(depth1_state, states[0], previous_face);
 
 	calc_states_encodings(&depth1_rotation, 1, values);
-	insert_ht_multiple(little_state_hts[2], depth1_state, states[0], previous_face, values);
+	insert_ht_multiple(state_hts[2], depth1_state, states[0], previous_face, values);
 
 	while(true) {
 		if(unlikely(state_idxs[curr_depth] == POSSIBLE_ROTATIONS)) {
@@ -388,13 +382,11 @@ void build_hash_tables(unsolved_case_t *shallow_state) {
 		}
 
 		calc_states_encodings(rotations, curr_depth + 2, values);
+		insert_ht_multiple(state_hts[curr_depth + 3], states[curr_depth][state_idx], states[curr_depth + 1], previous_face, values);
 
-		if (likely(curr_depth == MAX_TARGET_DEPTH - 3)) {
-			insert_ht_multiple(big_state_ht, states[curr_depth][state_idx], states[curr_depth + 1], previous_face, values);
+		if (likely(curr_depth == MAX_TARGET_DEPTH - 3))
 			state_idxs[curr_depth]++;
-		}
 		else {
-			insert_ht_multiple(little_state_hts[curr_depth + 3], states[curr_depth][state_idx], states[curr_depth + 1], previous_face, values);
 			state_idxs[curr_depth + 1] = 0;
 			write_previous_faces(previous_faces[curr_depth + 1], previous_face);
 			curr_depth++;
@@ -567,9 +559,9 @@ int main(int argc, char *argv[]) {
 
 	// create hash tables
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++)
-		little_state_hts[i] = create_hash_table(pow(16, i) + 1);  // in little hash table level 1, there are 18 entries, 18 > 16
-	big_state_ht = create_hash_table(pow(17, MAX_TARGET_DEPTH));
-	insert_ht(little_state_hts[0], target_state, 0);
+		state_hts[i] = create_hash_table(pow(16, i) + 1);  // in little hash table level 1, there are 18 entries, 18 > 16
+	state_hts[MAX_TARGET_DEPTH] = create_hash_table(pow(17, MAX_TARGET_DEPTH));  // it's the most import ht
+	insert_ht(state_hts[0], target_state, 0);
 
 	// create shallow target states
 	shallow_target_states_queue = create_queue();
