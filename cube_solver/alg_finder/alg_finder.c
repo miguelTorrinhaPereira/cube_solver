@@ -15,6 +15,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/sysinfo.h>
+#include <immintrin.h>
 
 #include "turn_data.h"
 #include "hash_table.h"
@@ -140,18 +141,65 @@ bool solve_case_check_hts(const uint8_t initial_state[STATE_SIZE], uint32_t *tar
 }
 
 
-void expand_state(const uint8_t *state_orig, uint8_t states[POSSIBLE_ROTATIONS + 1][STATE_SIZE], uint8_t previous_face) {
+inline void expand_state(const uint8_t *state_orig, uint8_t states[POSSIBLE_ROTATIONS][STATE_SIZE], uint8_t previous_face) {
 	const uint8_t (*turn_outcome)[POSSIBLE_ROTATIONS + 1] = turn_outcome_tables_8[previous_face];
 
-	//TODO: AVX
-	uint8_t *state_p = &states[0][0];
-	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS + 1; rotation++)
-		for (int piece = 0; piece < STATE_SIZE; piece++)
-			*(state_p++) = turn_outcome[state_orig[piece]][rotation];
+	uint8_t state_idx = 0;
+	__m128i l16[16], l8[8], l4[4], l2[2], l1;
+
+	for (int i16 = 0; i16 < 16; i16++)
+		l16[i16] = _mm_loadu_epi8(turn_outcome[state_orig[i16]]);
+
+	for (int hi8 = 0; hi8 < 2; hi8++) {
+		if (hi8) { for (int i8 = 0; i8 < 8; i8++) l8[i8] = _mm_unpackhi_epi8(l16[2 * i8], l16[2 * i8 + 1]); }
+		else     { for (int i8 = 0; i8 < 8; i8++) l8[i8] = _mm_unpacklo_epi8(l16[2 * i8], l16[2 * i8 + 1]); }
+
+		for (int hi4 = 0; hi4 < 2; hi4++) {
+			if (hi4) { for (int i4 = 0; i4 < 4; i4++) l4[i4] = _mm_unpackhi_epi16(l8[2 * i4], l8[2 * i4 + 1]); }
+			else     { for (int i4 = 0; i4 < 4; i4++) l4[i4] = _mm_unpacklo_epi16(l8[2 * i4], l8[2 * i4 + 1]); }
+
+			for (int hi2 = 0; hi2 < 2; hi2++) {
+				if (hi2) { for (int i2 = 0; i2 < 2; i2++) l2[i2] = _mm_unpackhi_epi32(l4[2 * i2], l4[2 * i2 + 1]); }
+				else     { for (int i2 = 0; i2 < 2; i2++) l2[i2] = _mm_unpacklo_epi32(l4[2 * i2], l4[2 * i2 + 1]); }
+
+				for (int hi1 = 0; hi1 < 2; hi1++) {
+					if (state_idx == 15)
+						continue;
+
+					if (hi1) { l1 = _mm_unpackhi_epi64(l2[0], l2[1]); }
+					else     { l1 = _mm_unpacklo_epi64(l2[0], l2[1]); }
+
+					_mm_storeu_epi8(states[state_idx++], l1);
+				}
+			}
+		}
+	}
+
+	
+	// it's 15 by 20, we only did the first 16 columns, we have 4 more to do
+	state_idx = 0;
+	for (int i4 = 0; i4 < 4; i4++)
+		l4[i4] = _mm_loadu_epi8(turn_outcome[state_orig[16 + i4]]);
+
+	for (int hi2 = 0; hi2 < 2; hi2++) {
+		if (hi2) { for (int i2 = 0; i2 < 2; i2++) l2[i2] = _mm_unpackhi_epi8(l4[2 * i2], l4[2 * i2 + 1]); }
+		else     { for (int i2 = 0; i2 < 2; i2++) l2[i2] = _mm_unpacklo_epi8(l4[2 * i2], l4[2 * i2 + 1]); }
+
+		for (int hi1 = 0; hi1 < 2; hi1++) {
+			if (hi1) { l1 = _mm_unpackhi_epi16(l2[0], l2[1]); }
+			else     { l1 = _mm_unpacklo_epi16(l2[0], l2[1]); }
+
+			*(uint32_t *)&states[state_idx++][16] = (uint32_t) _mm_extract_epi32(l1, 0);
+			*(uint32_t *)&states[state_idx++][16] = (uint32_t) _mm_extract_epi32(l1, 1);
+			*(uint32_t *)&states[state_idx++][16] = (uint32_t) _mm_extract_epi32(l1, 2);
+			if (state_idx != 15)
+				*(uint32_t *)&states[state_idx++][16] = (uint32_t) _mm_extract_epi32(l1, 3);
+		}
+	}
 }
 
 
-void write_faces(uint8_t faces[FACE_COUNT - 1], uint8_t previous_face) {
+inline void write_faces(uint8_t faces[FACE_COUNT - 1], uint8_t previous_face) {
 	uint8_t face = 0;
 	while(face < FACE_COUNT) {
 		if (face == previous_face)
@@ -188,7 +236,7 @@ bool solve_case_search(const uint8_t initial_state[STATE_SIZE], const uint32_t m
 		return false;
 	}
 
-	uint8_t states[max_initial_depth - 1][POSSIBLE_ROTATIONS + 1][STATE_SIZE];
+	uint8_t states[max_initial_depth - 1][POSSIBLE_ROTATIONS][STATE_SIZE];
 	uint8_t faces[max_initial_depth - 1][FACE_COUNT - 1];
 	uint8_t state_idxs[max_initial_depth - 1] = {};
 

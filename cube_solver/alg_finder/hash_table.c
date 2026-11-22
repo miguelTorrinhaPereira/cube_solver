@@ -383,6 +383,10 @@ HT_entry *next_entry(Hash_table hash_table, HT_entry *entry) {
 }
 
 
+//TODO:
+uint32_t insert_entry_multiple();
+
+
 uint32_t exists_key_multiple(Hash_table hash_table, const uint8_t *state_orig, uint8_t keys[POSSIBLE_ROTATIONS][STATE_SIZE], uint8_t previous_face) {
 	_Alignas(8) uint32_t hashes[POSSIBLE_ROTATIONS + 1];
 	const uint32_t (*turn_outcome)[POSSIBLE_ROTATIONS + 1] = turn_outcome_tables_32[previous_face];
@@ -394,13 +398,13 @@ uint32_t exists_key_multiple(Hash_table hash_table, const uint8_t *state_orig, u
 
 	const uint8_t *end = state_orig + STATE_SIZE;
 	for (; state_orig < end; state_orig++) {
-		__m512i new_pos_v = _mm512_load_epi32 (turn_outcome[*state_orig]);
-		hashes_v = _mm512_xor_epi32 (hashes_v, new_pos_v);
+		__m512i new_pos_v = _mm512_load_epi32(turn_outcome[*state_orig]);
+		hashes_v = _mm512_xor_epi32(hashes_v, new_pos_v);
 		hashes_v = _mm512_mullo_epi32(hashes_v, hash_mult_factor_v);
-		hashes_v = _mm512_xor_epi32 (hashes_v, _mm512_srlv_epi32(hashes_v, hash_shift_factor_v));
+		hashes_v = _mm512_xor_epi32(hashes_v, _mm512_srlv_epi32(hashes_v, hash_shift_factor_v));
 	}
 	
-	_mm512_storeu_epi32 (hashes, hashes_v);
+	_mm512_storeu_epi32(hashes, hashes_v);
 	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS; rotation++) {
 		uint32_t hash = hashes[rotation];
 		uint32_t index = get_index(hash, hash_table->capacity);
