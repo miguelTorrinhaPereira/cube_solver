@@ -383,9 +383,8 @@ HT_entry *next_entry(Hash_table hash_table, HT_entry *entry) {
 }
 
 
-static inline void hash_function_multiple(const uint8_t *state_orig,
-										  uint8_t keys[POSSIBLE_ROTATIONS][STATE_SIZE],
-										  uint8_t previous_face, uint32_t hashes[POSSIBLE_ROTATIONS]) {
+static inline void hash_function_multiple(const uint8_t state_orig[STATE_SIZE],
+										  const uint8_t previous_face, uint32_t hashes[POSSIBLE_ROTATIONS + 1]) {
 
 	const uint32_t (*turn_outcome)[POSSIBLE_ROTATIONS + 1] = turn_outcome_tables_32[previous_face];
 	const __m512i hash_seed_v = _mm512_set1_epi32(HASH_SEED);
@@ -406,12 +405,12 @@ static inline void hash_function_multiple(const uint8_t *state_orig,
 }
 
 
-uint32_t insert_ht_multiple(Hash_table hash_table, const uint8_t *state_orig,
-							uint8_t keys[POSSIBLE_ROTATIONS][STATE_SIZE],
-							uint8_t previous_face, const uint8_t values[POSSIBLE_ROTATIONS]) {
+uint32_t insert_ht_multiple(Hash_table hash_table, const uint8_t state_orig[STATE_SIZE],
+							const uint8_t keys[POSSIBLE_ROTATIONS][STATE_SIZE],
+							const uint8_t previous_face, const uint32_t values[POSSIBLE_ROTATIONS]) {
 
 	_Alignas(8) uint32_t hashes[POSSIBLE_ROTATIONS + 1];
-	hash_function_multiple(state_orig, keys, previous_face, hashes);
+	hash_function_multiple(state_orig, previous_face, hashes);
 
 	for (int i = 0; i < POSSIBLE_ROTATIONS; i++) {
 		HT_entry *new_entry = (HT_entry *) malloc(sizeof(HT_entry));
@@ -432,11 +431,11 @@ uint32_t insert_ht_multiple(Hash_table hash_table, const uint8_t *state_orig,
 }
 
 
-uint32_t exists_key_multiple(Hash_table hash_table, const uint8_t *state_orig,
-							 uint8_t keys[POSSIBLE_ROTATIONS][STATE_SIZE], uint8_t previous_face) {
+uint32_t exists_key_multiple(Hash_table hash_table, const uint8_t state_orig[STATE_SIZE],
+							 const uint8_t keys[POSSIBLE_ROTATIONS][STATE_SIZE], const uint8_t previous_face) {
 
 	_Alignas(8) uint32_t hashes[POSSIBLE_ROTATIONS + 1];
-	hash_function_multiple(state_orig, keys, previous_face, hashes);
+	hash_function_multiple(state_orig, previous_face, hashes);
 
 	for (int rotation = 0; rotation < POSSIBLE_ROTATIONS; rotation++) {
 		uint32_t hash = hashes[rotation];

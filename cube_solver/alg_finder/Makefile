@@ -15,7 +15,7 @@ time: all
 	/bin/time -v $(BIN_DIR)/$(BIN_NAME) $(TEST_FILE)
 
 debug:
-	gcc -O0  -g -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) $(CCFLAGS) -o $(BIN_DIR)/$(BIN_NAME)
+	gcc -O0 -g -fno-inline -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) $(CCFLAGS) -o $(BIN_DIR)/$(BIN_NAME)
 
 profile: | $(BIN_DIR)
 	gcc -O3 -pg -fno-inline  -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) $(CCFLAGS) -o $(BIN_DIR)/$(BIN_NAME)

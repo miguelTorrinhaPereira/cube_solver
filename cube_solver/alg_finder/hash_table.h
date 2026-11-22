@@ -68,7 +68,10 @@ HT_entry *first_entry(Hash_table hash_table);
 uint32_t get_hash_table_count(Hash_table hash_table);
 uint32_t get_hash_table_capacity(Hash_table hash_table);
 
-uint32_t exists_key_multiple(Hash_table hash_table, const uint8_t *state_orig, uint8_t keys[][STATE_SIZE], uint8_t previous_face);
-uint32_t insert_ht_multiple(Hash_table hash_table, const uint8_t *state_orig, uint8_t keys[][STATE_SIZE], uint8_t previous_face, const uint8_t values[]);
+uint32_t exists_key_multiple(Hash_table hash_table, const uint8_t state_orig[STATE_SIZE],
+							 const uint8_t keys[][STATE_SIZE], const uint8_t previous_face);
+uint32_t insert_ht_multiple(Hash_table hash_table, const uint8_t state_orig[STATE_SIZE],
+							const uint8_t keys[][STATE_SIZE],
+							const uint8_t previous_face, const uint32_t values[]);
 
 #endif
