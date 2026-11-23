@@ -18,9 +18,9 @@ debug:
 	gcc -O0 -g -fno-inline -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) $(CCFLAGS) -o $(BIN_DIR)/$(BIN_NAME)
 
 profile: | $(BIN_DIR)
-	gcc -O3 -pg -fno-inline  -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) $(CCFLAGS) -o $(BIN_DIR)/$(BIN_NAME)
-	../bin/alg_finder $(TEST_FILE)
-	gprof ../bin/alg_finder | batcat
+	gcc -O2 -g -fno-inline -DMAX_TARGET_DEPTH=$(MAX_TARGET_DEPTH) $(FILES) $(CCFLAGS) -o $(BIN_DIR)/$(BIN_NAME)
+	gprofng collect app -o run.er ../bin/alg_finder $(TEST_FILE)
+	gprofng display text run.er
 
 clean:
 	rm $(BIN_DIR)/$(BIN_NAME)
