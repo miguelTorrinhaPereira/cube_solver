@@ -32,6 +32,7 @@ typedef struct HT_entry {
 typedef struct {
 	uint32_t capacity;
 	_Atomic uint32_t count;
+	HT_entry *entry_arena;
 	_Atomic(HT_entry *)*table;
 } _Hash_table;
 
@@ -47,7 +48,7 @@ typedef _Hash_table *Hash_table;
 
 typedef enum { CLEAR, DELETE } Deletion_mode;
 
-Hash_table create_hash_table(uint32_t capacity);
+Hash_table create_hash_table(uint32_t capacity, int the_one);
 void resize_hash_table(Hash_table hash_table, uint32_t new_capacity);
 void delete_hash_table(Hash_table hash_table, Deletion_mode mode);
 

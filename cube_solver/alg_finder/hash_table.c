@@ -1,12 +1,16 @@
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdatomic.h>
+#include <sys/mman.h>
 #include <immintrin.h>
 
 #include "hash_table.h"
 #include "turn_data.h"
 
+
+#define MAP_HUGE_1GB    (30 << MAP_HUGE_SHIFT)
 
 // hash function constants
 #define HASH_SEED 0x9747b28c
@@ -104,7 +108,8 @@ static int insert_entry(Hash_table hash_table, HT_entry *new_entry) {
 
 	@return a pointer to the new hash table, NULL if it couldn't be create.
 */
-Hash_table create_hash_table(uint32_t capacity) {
+#include <stdio.h>
+Hash_table create_hash_table(uint32_t capacity, int the_one) {
 	Hash_table hash_table;
 	uint32_t old_capacity;
 	// capacity must be a power of two.
@@ -131,6 +136,22 @@ Hash_table create_hash_table(uint32_t capacity) {
 	if (hash_table->table == NULL)
 		return NULL;
 
+	if (the_one) {
+		size_t entry_arena_size = 10 * 1024 * 1024 * 1024LL;
+		hash_table->entry_arena = mmap(NULL, entry_arena_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_1GB, -1, 0);
+	}
+	else {
+		size_t entry_arena_size = hash_table->capacity * sizeof(HT_entry);
+		hash_table->entry_arena = mmap(NULL, entry_arena_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	}
+
+	if (hash_table->entry_arena == MAP_FAILED) {
+		free(hash_table->table);
+		return NULL;
+	}
+
+
+
 	return hash_table;
 }
 
@@ -148,7 +169,7 @@ void resize_hash_table(Hash_table hash_table, uint32_t new_capacity) {
 	// Should never give an error because of lack of memory,
 	// since the hash table is still functional.
 
-	new_hash_table = create_hash_table(new_capacity);
+	new_hash_table = create_hash_table(new_capacity, 0);
 	if (new_hash_table == NULL)
 		return;
 
@@ -176,13 +197,7 @@ void resize_hash_table(Hash_table hash_table, uint32_t new_capacity) {
 	@param mode the deletion mode to be used.
 */
 void delete_hash_table(Hash_table hash_table, Deletion_mode mode) {
-	HT_entry *current = first_entry(hash_table), *next;
-
-	while (current != NULL) {
-		next = next_entry(hash_table, current);
-		free(current);
-		current = next;
-	}
+	munmap(hash_table->entry_arena, hash_table->capacity * sizeof(HT_entry));
 
 	if (mode == DELETE) {
 		free(hash_table->table);
@@ -219,20 +234,16 @@ static inline float load_factor(Hash_table hash_table) {
 	@return 1 if the new entry couldn't be created, 0 otherwise.
 */
 int insert_ht(Hash_table hash_table, const uint8_t *key, uint32_t value) {
-	HT_entry *new_entry = (HT_entry *) malloc(sizeof(HT_entry));
-	if (new_entry == NULL)
-		return 1;
+	HT_entry *new_entry = &hash_table->entry_arena[atomic_fetch_add(&hash_table->count, 1)];
 
 	memcpy(new_entry->key, key, STATE_SIZE);
 	new_entry->value = value;
 	new_entry->hash = hash_function(key);
 
 	if(insert_entry(hash_table, new_entry)) {
-		free(new_entry);
 		return 2;  // already exists
 	}
 
-	hash_table->count++;
 	// doesn't work with paralelism without expensive locks
 	// if (load_factor(hash_table) > MAX_LOAD_FACTOR)
 	// 	resize_hash_table(hash_table, hash_table->capacity * RESIZING_FACTOR);
@@ -412,20 +423,16 @@ uint32_t insert_ht_multiple(Hash_table hash_table, const uint8_t state_orig[STAT
 	_Alignas(8) uint32_t hashes[POSSIBLE_ROTATIONS + 1];
 	hash_function_multiple(state_orig, previous_face, hashes);
 
+	uint32_t entrys_buff_base = atomic_fetch_add(&hash_table->count, POSSIBLE_ROTATIONS);
 	for (int i = 0; i < POSSIBLE_ROTATIONS; i++) {
-		HT_entry *new_entry = (HT_entry *) malloc(sizeof(HT_entry));
-		if (new_entry == NULL)
-			return 1;
+		HT_entry *new_entry = &hash_table->entry_arena[entrys_buff_base + i];
 
 		memcpy(new_entry->key, keys[i], STATE_SIZE);
 		new_entry->value = values[i];
 		new_entry->hash = hashes[i];
 
-		if(insert_entry(hash_table, new_entry))
-			free(new_entry);
+		insert_entry(hash_table, new_entry);
 	}
-
-	hash_table->count += POSSIBLE_ROTATIONS;
 
 	return 0;
 }

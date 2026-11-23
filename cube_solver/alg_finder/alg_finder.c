@@ -1,4 +1,6 @@
 //FIXME: something is wrong with stop mid solve
+//TODO: only use 16 bits or 8 for the tag of the hash
+//TODO: only use 18 pieces, you don't need the full 20 because of paritty
 //TODO: SIMD the shitt out of the search function last level step, will need get_entry2 that already receives the hash, previous state and move
 //  _mm512_xor_epi32, _mm_mask_mullo_epi32, _mm512_sll_epi32
 //TODO: try linear probing hash table, should be faster for reads, UINT32_MAX in value for unused spaces, mutexes for sync, may be slower to construct, but it doesn't really matter
@@ -559,8 +561,8 @@ int main(int argc, char *argv[]) {
 
 	// create hash tables
 	for(int i = 0; i < MAX_TARGET_DEPTH; i++)
-		state_hts[i] = create_hash_table(pow(16, i) + 1);  // in little hash table level 1, there are 18 entries, 18 > 16
-	state_hts[MAX_TARGET_DEPTH] = create_hash_table(pow(17, MAX_TARGET_DEPTH));  // it's the most import ht
+		state_hts[i] = create_hash_table(pow(16, i) + 1, 0);  // in little hash table level 1, there are 18 entries, 18 > 16
+	state_hts[MAX_TARGET_DEPTH] = create_hash_table(pow(17, MAX_TARGET_DEPTH), 1);  // it's the most import ht
 	insert_ht(state_hts[0], target_state, 0);
 
 	// create shallow target states
